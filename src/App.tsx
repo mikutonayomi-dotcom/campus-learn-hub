@@ -3,70 +3,102 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import FacultyDashboard from "./pages/faculty/Dashboard";
 import StudentDashboard from "./pages/student/Dashboard";
-import PlaceholderPage from "./pages/PlaceholderPage";
+import AdminUsers from "./pages/admin/Users";
+import AdminLogs from "./pages/admin/Logs";
+import AdminApprovals from "./pages/admin/Approvals";
+import AdminAcademics from "./pages/admin/Academics";
+import AdminScheduling from "./pages/admin/Scheduling";
+import AdminFacilities from "./pages/admin/Facilities";
+import AdminEvents from "./pages/admin/Events";
+import AdminSearch from "./pages/admin/Search";
+import AdminReports from "./pages/admin/Reports";
+import AdminSettings from "./pages/admin/Settings";
+import FacultyStudents from "./pages/faculty/Students";
+import FacultyViolations from "./pages/faculty/Violations";
+import FacultyAchievements from "./pages/faculty/Achievements";
+import FacultyCourses from "./pages/faculty/Courses";
+import FacultySubmissions from "./pages/faculty/Submissions";
+import FacultySchedule from "./pages/faculty/Schedule";
+import FacultyEvents from "./pages/faculty/Events";
+import FacultyReports from "./pages/faculty/Reports";
+import StudentProfile from "./pages/student/Profile";
+import StudentAcademics from "./pages/student/Academics";
+import StudentMaterials from "./pages/student/Materials";
+import StudentSubmissions from "./pages/student/Submissions";
+import StudentViolations from "./pages/student/Violations";
+import StudentAchievements from "./pages/student/Achievements";
+import StudentEvents from "./pages/student/Events";
+import StudentOrganizations from "./pages/student/Organizations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Login />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<DashboardLayout role="admin" />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<PlaceholderPage title="User Management" />} />
-            <Route path="logs" element={<PlaceholderPage title="Activity Logs" />} />
-            <Route path="approvals" element={<PlaceholderPage title="Approvals" />} />
-            <Route path="academics" element={<PlaceholderPage title="Courses & Sections" />} />
-            <Route path="scheduling" element={<PlaceholderPage title="Scheduling" />} />
-            <Route path="facilities" element={<PlaceholderPage title="Facilities" />} />
-            <Route path="events" element={<PlaceholderPage title="Events" />} />
-            <Route path="search" element={<PlaceholderPage title="Advanced Search" />} />
-            <Route path="reports" element={<PlaceholderPage title="Reports" />} />
-            <Route path="settings" element={<PlaceholderPage title="Settings" />} />
-          </Route>
+              {/* Admin Routes */}
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><DashboardLayout role="admin" /></ProtectedRoute>}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="logs" element={<AdminLogs />} />
+                <Route path="approvals" element={<AdminApprovals />} />
+                <Route path="academics" element={<AdminAcademics />} />
+                <Route path="scheduling" element={<AdminScheduling />} />
+                <Route path="facilities" element={<AdminFacilities />} />
+                <Route path="events" element={<AdminEvents />} />
+                <Route path="search" element={<AdminSearch />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
 
-          {/* Faculty Routes */}
-          <Route path="/faculty" element={<DashboardLayout role="faculty" />}>
-            <Route index element={<FacultyDashboard />} />
-            <Route path="students" element={<PlaceholderPage title="My Students" />} />
-            <Route path="violations" element={<PlaceholderPage title="Violations" />} />
-            <Route path="achievements" element={<PlaceholderPage title="Achievements" />} />
-            <Route path="courses" element={<PlaceholderPage title="Courses & Materials" />} />
-            <Route path="submissions" element={<PlaceholderPage title="Submissions" />} />
-            <Route path="schedule" element={<PlaceholderPage title="Schedule" />} />
-            <Route path="events" element={<PlaceholderPage title="Events" />} />
-            <Route path="reports" element={<PlaceholderPage title="Reports" />} />
-          </Route>
+              {/* Faculty Routes */}
+              <Route path="/faculty" element={<ProtectedRoute allowedRoles={["faculty"]}><DashboardLayout role="faculty" /></ProtectedRoute>}>
+                <Route index element={<FacultyDashboard />} />
+                <Route path="students" element={<FacultyStudents />} />
+                <Route path="violations" element={<FacultyViolations />} />
+                <Route path="achievements" element={<FacultyAchievements />} />
+                <Route path="courses" element={<FacultyCourses />} />
+                <Route path="submissions" element={<FacultySubmissions />} />
+                <Route path="schedule" element={<FacultySchedule />} />
+                <Route path="events" element={<FacultyEvents />} />
+                <Route path="reports" element={<FacultyReports />} />
+              </Route>
 
-          {/* Student Routes */}
-          <Route path="/student" element={<DashboardLayout role="student" />}>
-            <Route index element={<StudentDashboard />} />
-            <Route path="profile" element={<PlaceholderPage title="My Profile" />} />
-            <Route path="academics" element={<PlaceholderPage title="Academics" />} />
-            <Route path="materials" element={<PlaceholderPage title="Learning Materials" />} />
-            <Route path="submissions" element={<PlaceholderPage title="Submissions" />} />
-            <Route path="violations" element={<PlaceholderPage title="Violations" />} />
-            <Route path="achievements" element={<PlaceholderPage title="Achievements" />} />
-            <Route path="events" element={<PlaceholderPage title="Events" />} />
-            <Route path="organizations" element={<PlaceholderPage title="Organizations" />} />
-          </Route>
+              {/* Student Routes */}
+              <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]}><DashboardLayout role="student" /></ProtectedRoute>}>
+                <Route index element={<StudentDashboard />} />
+                <Route path="profile" element={<StudentProfile />} />
+                <Route path="academics" element={<StudentAcademics />} />
+                <Route path="materials" element={<StudentMaterials />} />
+                <Route path="submissions" element={<StudentSubmissions />} />
+                <Route path="violations" element={<StudentViolations />} />
+                <Route path="achievements" element={<StudentAchievements />} />
+                <Route path="events" element={<StudentEvents />} />
+                <Route path="organizations" element={<StudentOrganizations />} />
+              </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
