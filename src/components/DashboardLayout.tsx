@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import ThemeToggle from "@/components/ThemeToggle";
 import ucLogo from "@/assets/uc-logo.png";
 import ccsLogo from "@/assets/ccs-logo.png";
 
@@ -88,15 +90,21 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ role }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut, profile } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navItems = getNavItems(role);
   const RoleIcon = getRoleIcon(role);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background transition-colors duration-300">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-fade-in" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
@@ -107,7 +115,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
         {/* Logo area */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <img src={ccsLogo} alt="CCS" className="w-10 h-10 object-contain" />
+            <img src={ccsLogo} alt="CCS" className="w-10 h-10 object-contain transition-transform duration-200 hover:scale-110" />
             <div className="min-w-0">
               <h1 className="text-sm font-display font-bold text-sidebar-foreground truncate">CCS Profiling</h1>
               <p className="text-xs text-sidebar-foreground/60">System</p>
@@ -120,7 +128,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
 
         {/* Role badge */}
         <div className="px-4 py-3 border-b border-sidebar-border">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent transition-colors duration-200">
             <RoleIcon className="h-4 w-4 text-sidebar-primary" />
             <span className="text-xs font-semibold text-sidebar-foreground">{getRoleLabel(role)}</span>
           </div>
@@ -135,13 +143,13 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
                 key={item.path}
                 onClick={() => { navigate(item.path); setSidebarOpen(false); }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group",
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-md"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground hover:translate-x-1"
                 )}
               >
-                <item.icon className="h-4 w-4 shrink-0" />
+                <item.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />
                 {item.label}
               </button>
             );
@@ -151,8 +159,8 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
         {/* Bottom */}
         <div className="p-3 border-t border-sidebar-border">
           <button
-            onClick={() => navigate("/")}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive transition-all duration-200"
           >
             <LogOut className="h-4 w-4" />
             Sign Out
@@ -163,7 +171,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-16 border-b bg-card flex items-center px-4 gap-4 shrink-0">
+        <header className="h-16 border-b bg-card flex items-center px-4 gap-4 shrink-0 transition-colors duration-300">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
@@ -176,14 +184,15 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" className="relative group">
+              <Bell className="h-5 w-5 transition-transform duration-200 group-hover:rotate-12" />
+              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                 3
               </span>
             </Button>
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-              U
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold transition-transform duration-200 hover:scale-110 cursor-pointer">
+              {profile?.full_name?.[0]?.toUpperCase() || "U"}
             </div>
           </div>
         </header>
