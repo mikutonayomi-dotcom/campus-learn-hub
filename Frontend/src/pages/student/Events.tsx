@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MapPin, Clock } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 
 const events = [
   { title: "CCS Week 2024", type: "Curricular", date: "Apr 15-19, 2024", location: "CCS Building", status: "upcoming", joined: false },

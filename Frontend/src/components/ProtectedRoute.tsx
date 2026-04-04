@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { session, role, loading } = useAuth();
+  const { user, role, loading } = useAuth();
 
   if (loading) {
     return (
@@ -21,7 +21,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
-  if (!session) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/" replace />;
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     return <Navigate to={`/${role}`} replace />;
   }

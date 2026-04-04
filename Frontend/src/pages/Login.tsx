@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import ccsLogo from "@/assets/ccs-logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, role, session } = useAuth();
+  const { signIn, signUp, role, user } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,10 +22,6 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
-  // Redirect if already logged in
-  if (session && role) {
-    navigate(`/${role}`, { replace: true });
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,10 +53,11 @@ const Login = () => {
   };
 
   // Auto-redirect when role is loaded after sign in
-  if (session && role) {
-    navigate(`/${role}`, { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (user && role) {
+      navigate(`/${role}`, { replace: true });
+    }
+  }, [user, role, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 transition-colors duration-300">

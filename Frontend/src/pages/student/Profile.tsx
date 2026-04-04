@@ -8,18 +8,18 @@ import { GraduationCap, Save, Camera } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const StudentProfile = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const [form, setForm] = useState({
-    fullName: profile?.full_name || "",
-    email: profile?.email || "",
-    contactNumber: profile?.contact_number || "",
-    address: profile?.address || "",
-    emergencyContact: profile?.emergency_contact || "",
-    emergencyContactNumber: profile?.emergency_contact_number || "",
-    studentId: profile?.student_id || "",
-    course: profile?.course || "BSIT",
-    section: profile?.section || "",
-    yearLevel: profile?.year_level || "",
+    fullName: user?.name || "",
+    email: user?.email || "",
+    contactNumber: "",
+    address: "",
+    emergencyContact: "",
+    emergencyContactNumber: "",
+    studentId: "",
+    course: "BSIT",
+    section: "",
+    yearLevel: "",
   });
 
   const handleChange = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
@@ -36,7 +36,7 @@ const StudentProfile = () => {
           <CardContent className="p-6 flex flex-col items-center">
             <div className="relative group cursor-pointer">
               <Avatar className="h-24 w-24 transition-transform duration-200 group-hover:scale-105">
-                <AvatarImage src={profile?.avatar_url} />
+                <AvatarImage src="" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{form.fullName?.[0]?.toUpperCase() || "S"}</AvatarFallback>
               </Avatar>
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">

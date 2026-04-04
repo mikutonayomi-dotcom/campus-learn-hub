@@ -90,7 +90,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ role }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const { signOut, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navItems = getNavItems(role);
   const RoleIcon = getRoleIcon(role);
@@ -192,7 +192,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
               </span>
             </Button>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold transition-transform duration-200 hover:scale-110 cursor-pointer">
-              {profile?.full_name?.[0]?.toUpperCase() || "U"}
+              {user?.name?.[0]?.toUpperCase() || "U"}
             </div>
           </div>
         </header>

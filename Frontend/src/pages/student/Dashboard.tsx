@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Award, Calendar, AlertTriangle, Bell, GraduationCap } from "lucide-react";
+import { BookOpen, ClipboardList, Award, Calendar, AlertTriangle, Bell } from "lucide-react";
 
 const stats = [
   { label: "Enrolled Subjects", value: "6", icon: BookOpen, change: "2nd Semester" },

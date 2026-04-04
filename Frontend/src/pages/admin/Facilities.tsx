@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building, Monitor, Wifi } from "lucide-react";
+import { Building, Monitor } from "lucide-react";
 
 const facilities = [
   { name: "Computer Lab 1", type: "Lab", capacity: 40, status: "available", equipment: "40 PCs, Projector" },
