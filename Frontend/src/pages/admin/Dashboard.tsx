@@ -1,16 +1,59 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, AlertTriangle, Award, CalendarDays, FileText, TrendingUp, Shield } from "lucide-react";
-
-const stats = [
-  { label: "Total Students", value: "486", icon: Users, change: "+12 this semester" },
-  { label: "Faculty Members", value: "24", icon: BookOpen, change: "3 sections each" },
-  { label: "Active Violations", value: "8", icon: AlertTriangle, change: "2 pending review" },
-  { label: "Achievements", value: "52", icon: Award, change: "+5 this month" },
-  { label: "Upcoming Events", value: "6", icon: CalendarDays, change: "Next: Mar 31" },
-  { label: "Pending Approvals", value: "14", icon: FileText, change: "Needs attention" },
-];
+import { Users, BookOpen, AlertTriangle, Award, CalendarDays, FileText, TrendingUp, Shield, Loader2 } from "lucide-react";
+import { useDashboardStats, useActivityLogs, usePendingApprovals } from "@/hooks/useApi";
 
 const AdminDashboard = () => {
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: logs, isLoading: logsLoading } = useActivityLogs({ per_page: 5 });
+  const { data: pendingApprovals, isLoading: pendingLoading } = usePendingApprovals();
+
+  const statItems = [
+    { 
+      label: "Total Students", 
+      value: stats?.students?.total?.toString() || "0", 
+      icon: Users, 
+      change: `${stats?.students?.by_status?.length || 0} status categories` 
+    },
+    { 
+      label: "Faculty Members", 
+      value: stats?.faculty?.total?.toString() || "0", 
+      icon: BookOpen, 
+      change: "Active faculty" 
+    },
+    { 
+      label: "Active Violations", 
+      value: stats?.violations?.total?.toString() || "0", 
+      icon: AlertTriangle, 
+      change: `${stats?.violations?.pending || 0} pending review` 
+    },
+    { 
+      label: "Achievements", 
+      value: stats?.achievements?.total?.toString() || "0", 
+      icon: Award, 
+      change: `${stats?.achievements?.pending || 0} pending approval` 
+    },
+    { 
+      label: "Upcoming Events", 
+      value: stats?.events?.upcoming?.toString() || "0", 
+      icon: CalendarDays, 
+      change: `${stats?.events?.total || 0} total events` 
+    },
+    { 
+      label: "Pending Approvals", 
+      value: pendingApprovals?.total?.toString() || "0", 
+      icon: FileText, 
+      change: pendingApprovals?.total > 0 ? "Needs attention" : "All caught up" 
+    },
+  ];
+
+  if (statsLoading || pendingLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -19,7 +62,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.map((stat) => (
+        {statItems.map((stat) => (
           <Card key={stat.label} className="hover:shadow-md transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -46,20 +89,24 @@ const AdminDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { text: "Prof. Santos uploaded grades for IT301", time: "2 min ago" },
-                { text: "New violation report submitted", time: "15 min ago" },
-                { text: "Student Juan Dela Cruz updated profile", time: "1 hr ago" },
-                { text: "Event 'Hackathon 2026' created", time: "2 hrs ago" },
-                { text: "3 new student registrations approved", time: "3 hrs ago" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <p className="text-sm text-foreground">{item.text}</p>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">{item.time}</span>
-                </div>
-              ))}
-            </div>
+            {logsLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : logs?.data?.length > 0 ? (
+              <div className="space-y-3">
+                {logs.data.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <p className="text-sm text-foreground">{item.description}</p>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+            )}
           </CardContent>
         </Card>
 
@@ -73,10 +120,10 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {[
-                { label: "Active Users Online", value: "47", color: "bg-success" },
-                { label: "Pending Approvals", value: "14", color: "bg-warning" },
-                { label: "Unresolved Violations", value: "8", color: "bg-destructive" },
-                { label: "System Uptime", value: "99.9%", color: "bg-primary" },
+                { label: "Pending Approvals", value: pendingApprovals?.total?.toString() || "0", color: pendingApprovals?.total > 0 ? "bg-warning" : "bg-success" },
+                { label: "Unresolved Violations", value: stats?.violations?.pending?.toString() || "0", color: stats?.violations?.pending > 0 ? "bg-destructive" : "bg-success" },
+                { label: "Organizations", value: stats?.organizations?.total?.toString() || "0", color: "bg-primary" },
+                { label: "System Status", value: "Operational", color: "bg-success" },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

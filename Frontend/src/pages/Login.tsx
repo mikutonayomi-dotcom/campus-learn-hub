@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -13,14 +13,12 @@ import ccsLogo from "@/assets/ccs-logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, role, user } = useAuth();
+  const { signIn, role, user } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,19 +26,9 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await signUp(email, password, fullName);
-        if (error) throw error;
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account, or sign in if auto-confirm is enabled.",
-        });
-        setIsSignUp(false);
-      } else {
-        const { error } = await signIn(email, password);
-        if (error) throw error;
-        // Role will be fetched by AuthContext, redirect handled by effect
-      }
+      const { error } = await signIn(email, password);
+      if (error) throw error;
+      // Role will be fetched by AuthContext, redirect handled by effect
     } catch (error: any) {
       toast({
         title: "Error",
@@ -86,26 +74,11 @@ const Login = () => {
           <CardHeader className="text-center pb-2 pt-6">
             <h2 className="text-2xl font-display font-bold text-foreground">CCS Profiling System</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {isSignUp ? "Create your account" : "Sign in to your account"}
+              Sign in to your account
             </p>
           </CardHeader>
           <CardContent className="pt-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
-                <div className="space-y-2 animate-fade-in">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="Juan Dela Cruz"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    className="transition-all duration-200 focus:scale-[1.01]"
-                  />
-                </div>
-              )}
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -150,27 +123,16 @@ const Login = () => {
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    {isSignUp ? "Creating account..." : "Signing in..."}
+                    Signing in...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    {isSignUp ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
-                    {isSignUp ? "Create Account" : "Sign In"}
+                    <LogIn className="h-4 w-4" />
+                    Sign In
                   </span>
                 )}
               </Button>
             </form>
-
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors duration-200 hover:underline"
-              >
-                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-              </button>
-            </div>
-
             <p className="text-center text-xs text-muted-foreground mt-6">
               Pamantasan ng Cabuyao &bull; BSIT Department
             </p>

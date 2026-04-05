@@ -58,10 +58,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rooms/{room}/availability', [RoomController::class, 'availability']);
 
     // Student routes
+    Route::get('/students/next-id', [StudentController::class, 'getNextStudentId']);
     Route::apiResource('students', StudentController::class);
     Route::get('/faculty/my-students', [FacultyController::class, 'myStudents']);
 
     // Faculty routes
+    Route::get('/faculty/next-id', [FacultyController::class, 'getNextEmployeeId']);
     Route::apiResource('faculty', FacultyController::class);
 
     // Subject routes

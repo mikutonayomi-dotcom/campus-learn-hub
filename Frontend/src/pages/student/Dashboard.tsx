@@ -1,19 +1,47 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, ClipboardList, Award, Calendar, AlertTriangle, Bell } from "lucide-react";
-
-const stats = [
-  { label: "Enrolled Subjects", value: "6", icon: BookOpen, change: "2nd Semester" },
-  { label: "Pending Tasks", value: "5", icon: ClipboardList, change: "2 due tomorrow" },
-  { label: "Achievements", value: "3", icon: Award, change: "1 pending verification" },
-  { label: "Violations", value: "0", icon: AlertTriangle, change: "Clean record" },
-];
+import { BookOpen, ClipboardList, Award, Calendar, AlertTriangle, Bell, Loader2 } from "lucide-react";
+import { useMySchedule, useMySubmissions, useMyProfile, useNotifications, useUnreadCount } from "@/hooks/useApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
+  const { data: schedule, isLoading: scheduleLoading } = useMySchedule();
+  const { data: submissions, isLoading: submissionsLoading } = useMySubmissions();
+  const { data: notifications, isLoading: notifLoading } = useNotifications();
+  const { data: unreadCount } = useUnreadCount();
+
+  const isLoading = profileLoading || scheduleLoading || submissionsLoading || notifLoading;
+
+  // Calculate stats
+  const pendingTasks = submissions?.filter((s: any) => s.status === 'submitted')?.length || 0;
+  const approvedAchievements = profile?.achievements?.filter((a: any) => a.status === 'approved')?.length || 0;
+  const violationsCount = profile?.violations?.filter((v: any) => v.status === 'approved')?.length || 0;
+
+  const stats = [
+    { label: "Enrolled Subjects", value: schedule?.length?.toString() || "0", icon: BookOpen, change: "Current Semester" },
+    { label: "Pending Tasks", value: pendingTasks.toString(), icon: ClipboardList, change: "Awaiting grade" },
+    { label: "Achievements", value: approvedAchievements.toString(), icon: Award, change: "Approved records" },
+    { label: "Violations", value: violationsCount.toString(), icon: AlertTriangle, change: violationsCount === 0 ? "Clean record" : "On file" },
+  ];
+
+  // Get today's day name
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const todaysClasses = schedule?.filter((s: any) => s.day === today) || [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Student Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">Welcome back, Student</p>
+        <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.name || "Student"}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -44,22 +72,23 @@ const StudentDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { time: "8:00 AM", subject: "IT301 - Web Development", room: "Lab 3", faculty: "Prof. Santos" },
-                { time: "10:00 AM", subject: "IT302 - Database Systems", room: "Room 201", faculty: "Prof. Reyes" },
-                { time: "1:00 PM", subject: "GE104 - Ethics", room: "Room 105", faculty: "Prof. Cruz" },
-                { time: "3:00 PM", subject: "IT303 - Software Engineering", room: "Lab 1", faculty: "Prof. Garcia" },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4 py-3 border-b last:border-0">
-                  <span className="text-sm font-semibold text-primary whitespace-nowrap">{item.time}</span>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.subject}</p>
-                    <p className="text-xs text-muted-foreground">{item.faculty} &bull; {item.room}</p>
+            {todaysClasses.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No classes scheduled for today</p>
+            ) : (
+              <div className="space-y-3">
+                {todaysClasses.map((item: any, i: number) => (
+                  <div key={i} className="flex gap-4 py-3 border-b last:border-0">
+                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
+                      {item.start_time?.substring(0, 5)}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.subject?.code} - {item.subject?.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.faculty?.user?.name} &bull; {item.room?.name}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -68,22 +97,28 @@ const StudentDashboard = () => {
             <CardTitle className="text-lg font-display flex items-center gap-2">
               <Bell className="h-5 w-5 text-primary" />
               Notifications
+              {unreadCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-destructive text-destructive-foreground rounded-full">
+                  {unreadCount}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { text: "New grades posted for IT301", time: "30 min ago", type: "grade" },
-                { text: "Assignment due: Lab Exercise 5", time: "2 hrs ago", type: "task" },
-                { text: "Hackathon 2026 registration open", time: "1 day ago", type: "event" },
-                { text: "New learning material uploaded", time: "2 days ago", type: "material" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <p className="text-sm text-foreground">{item.text}</p>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">{item.time}</span>
-                </div>
-              ))}
-            </div>
+            {notifications?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No notifications</p>
+            ) : (
+              <div className="space-y-3">
+                {notifications?.slice(0, 5).map((item: any) => (
+                  <div key={item.id} className={`flex items-center justify-between py-2 border-b last:border-0 ${!item.is_read ? 'bg-muted/50 -mx-4 px-4' : ''}`}>
+                    <p className="text-sm text-foreground">{item.title}</p>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

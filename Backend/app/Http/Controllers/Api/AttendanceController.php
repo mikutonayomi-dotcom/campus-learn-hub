@@ -51,17 +51,22 @@ class AttendanceController extends Controller
             ->where('date', $validated['date'])
             ->first();
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         if ($existing) {
             $existing->update([
                 ...$validated,
-                'marked_by' => $request->user()->faculty->id,
+                'marked_by' => $faculty->id,
             ]);
             return response()->json($existing->load(['student.user', 'schedule.subject']), 200);
         }
 
         $attendance = Attendance::create([
             ...$validated,
-            'marked_by' => $request->user()->faculty->id,
+            'marked_by' => $faculty->id,
         ]);
 
         return response()->json($attendance->load(['student.user', 'schedule.subject']), 201);
@@ -79,6 +84,11 @@ class AttendanceController extends Controller
         ]);
 
         $created = [];
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+        
         foreach ($validated['attendance'] as $record) {
             $attendance = Attendance::updateOrCreate(
                 [
@@ -89,7 +99,7 @@ class AttendanceController extends Controller
                 [
                     'status' => $record['status'],
                     'remarks' => $record['remarks'] ?? null,
-                    'marked_by' => $request->user()->faculty->id,
+                    'marked_by' => $faculty->id,
                 ]
             );
             $created[] = $attendance;
@@ -110,9 +120,14 @@ class AttendanceController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $attendance->update([
             ...$validated,
-            'marked_by' => $request->user()->faculty->id,
+            'marked_by' => $faculty->id,
         ]);
 
         return response()->json($attendance->load(['student.user', 'schedule.subject']));
@@ -120,8 +135,23 @@ class AttendanceController extends Controller
 
     public function myAttendance(Request $request)
     {
+        $student = $request->user()->student;
+        if (!$student) {
+            return response()->json([
+                'records' => [],
+                'statistics' => [
+                    'total' => 0,
+                    'present' => 0,
+                    'absent' => 0,
+                    'late' => 0,
+                    'excused' => 0,
+                    'attendance_rate' => 0,
+                ],
+            ]);
+        }
+
         $attendance = Attendance::with(['schedule.subject'])
-            ->where('student_id', $request->user()->student->id)
+            ->where('student_id', $student->id)
             ->orderBy('date', 'desc')
             ->get();
 

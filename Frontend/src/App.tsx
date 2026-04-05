@@ -15,7 +15,9 @@ import AdminUsers from "./pages/admin/Users";
 import AdminLogs from "./pages/admin/Logs";
 import AdminApprovals from "./pages/admin/Approvals";
 import AdminAcademics from "./pages/admin/Academics";
-import AdminScheduling from "./pages/admin/Scheduling";
+import AdminCourses from "./pages/admin/Courses";
+import AdminSections from "./pages/admin/Sections";
+import AdminSchedules from "./pages/admin/Schedules";
 import AdminFacilities from "./pages/admin/Facilities";
 import AdminEvents from "./pages/admin/Events";
 import AdminSearch from "./pages/admin/Search";
@@ -59,7 +61,9 @@ const App = () => (
                 <Route path="logs" element={<AdminLogs />} />
                 <Route path="approvals" element={<AdminApprovals />} />
                 <Route path="academics" element={<AdminAcademics />} />
-                <Route path="scheduling" element={<AdminScheduling />} />
+                <Route path="courses" element={<AdminCourses />} />
+                <Route path="sections" element={<AdminSections />} />
+                <Route path="schedules" element={<AdminSchedules />} />
                 <Route path="facilities" element={<AdminFacilities />} />
                 <Route path="events" element={<AdminEvents />} />
                 <Route path="search" element={<AdminSearch />} />

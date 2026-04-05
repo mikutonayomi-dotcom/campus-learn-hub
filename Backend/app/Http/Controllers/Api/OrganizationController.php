@@ -106,15 +106,23 @@ class OrganizationController extends Controller
     public function myOrganizations(Request $request)
     {
         if ($request->user()->isStudent()) {
+            $student = $request->user()->student;
+            if (!$student) {
+                return response()->json([]);
+            }
             $organizations = Organization::with(['adviser.user', 'members'])
-                ->whereHas('members', function ($q) use ($request) {
-                    $q->where('student_id', $request->user()->student->id)
+                ->whereHas('members', function ($q) use ($student) {
+                    $q->where('student_id', $student->id)
                       ->whereNull('left_at');
                 })
                 ->get();
         } else {
+            $faculty = $request->user()->faculty;
+            if (!$faculty) {
+                return response()->json([]);
+            }
             $organizations = Organization::with(['adviser.user', 'members.user'])
-                ->where('adviser_id', $request->user()->faculty->id)
+                ->where('adviser_id', $faculty->id)
                 ->get();
         }
 

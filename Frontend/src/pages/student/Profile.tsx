@@ -1,28 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, Save, Camera } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { GraduationCap, Save, Camera, Loader2 } from "lucide-react";
+import { useMyProfile } from "@/hooks/useApi";
+import { useToast } from "@/hooks/use-toast";
 
 const StudentProfile = () => {
-  const { user } = useAuth();
+  const { toast } = useToast();
+  const { data: profile, isLoading } = useMyProfile();
+  
   const [form, setForm] = useState({
-    fullName: user?.name || "",
-    email: user?.email || "",
+    fullName: "",
+    email: "",
     contactNumber: "",
     address: "",
     emergencyContact: "",
     emergencyContactNumber: "",
     studentId: "",
-    course: "BSIT",
+    course: "",
     section: "",
     yearLevel: "",
   });
 
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        fullName: profile.user?.name || "",
+        email: profile.user?.email || "",
+        contactNumber: profile.contact_number || "",
+        address: profile.address || "",
+        emergencyContact: profile.emergency_contact_name || "",
+        emergencyContactNumber: profile.emergency_contact_number || "",
+        studentId: profile.student_id || "",
+        course: profile.course?.name || "",
+        section: profile.section || "",
+        yearLevel: profile.year_level?.toString() || "",
+      });
+    }
+  }, [profile]);
+
   const handleChange = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
+  const handleSave = () => {
+    toast({ title: "Coming Soon", description: "Profile update functionality will be implemented" });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -56,10 +88,10 @@ const StudentProfile = () => {
               {[
                 { label: "Full Name", field: "fullName", placeholder: "Juan Dela Cruz" },
                 { label: "Email", field: "email", placeholder: "you@uc.edu.ph", disabled: true },
-                { label: "Student ID", field: "studentId", placeholder: "2024-00001" },
+                { label: "Student ID", field: "studentId", placeholder: "2024-00001", disabled: true },
                 { label: "Contact Number", field: "contactNumber", placeholder: "09XX XXX XXXX" },
-                { label: "Year Level", field: "yearLevel", placeholder: "3rd Year" },
-                { label: "Section", field: "section", placeholder: "3A" },
+                { label: "Year Level", field: "yearLevel", placeholder: "3rd Year", disabled: true },
+                { label: "Section", field: "section", placeholder: "3A", disabled: true },
                 { label: "Address", field: "address", placeholder: "Cabuyao, Laguna" },
                 { label: "Emergency Contact", field: "emergencyContact", placeholder: "Parent/Guardian name" },
                 { label: "Emergency Contact #", field: "emergencyContactNumber", placeholder: "09XX XXX XXXX" },
@@ -70,7 +102,7 @@ const StudentProfile = () => {
                 </div>
               ))}
             </div>
-            <Button className="mt-6 gap-2 transition-all duration-200 hover:scale-[1.02]"><Save className="h-4 w-4" /> Save Changes</Button>
+            <Button onClick={handleSave} className="mt-6 gap-2 transition-all duration-200 hover:scale-[1.02]"><Save className="h-4 w-4" /> Save Changes</Button>
           </CardContent>
         </Card>
       </div>

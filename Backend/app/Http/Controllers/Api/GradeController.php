@@ -53,9 +53,14 @@ class GradeController extends Controller
             $totalGrade = ($validated['midterm_grade'] + $validated['final_grade']) / 2;
         }
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $grade = Grade::create([
             ...$validated,
-            'faculty_id' => $request->user()->faculty->id,
+            'faculty_id' => $faculty->id,
             'total_grade' => $totalGrade,
         ]);
 
@@ -98,7 +103,8 @@ class GradeController extends Controller
     public function lock(Request $request, Grade $grade)
     {
         // Only admin or the faculty who created can lock
-        if (!$request->user()->isAdmin() && $grade->faculty_id !== $request->user()->faculty->id) {
+        $faculty = $request->user()->faculty;
+        if (!$request->user()->isAdmin() && (!$faculty || $grade->faculty_id !== $faculty->id)) {
             return response()->json(['message' => 'Unauthorized to lock this grade'], 403);
         }
 
@@ -108,8 +114,13 @@ class GradeController extends Controller
 
     public function myGrades(Request $request)
     {
+        $student = $request->user()->student;
+        if (!$student) {
+            return response()->json([]);
+        }
+
         $grades = Grade::with(['subject', 'faculty.user'])
-            ->where('student_id', $request->user()->student->id)
+            ->where('student_id', $student->id)
             ->orderBy('academic_year', 'desc')
             ->orderBy('semester', 'desc')
             ->get();
@@ -119,7 +130,12 @@ class GradeController extends Controller
 
     public function gradesToManage(Request $request)
     {
-        $facultyId = $request->user()->faculty->id;
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json([]);
+        }
+
+        $facultyId = $faculty->id;
         $subjectIds = \App\Models\Schedule::where('faculty_id', $facultyId)->pluck('subject_id');
 
         $grades = Grade::with(['student.user', 'subject'])

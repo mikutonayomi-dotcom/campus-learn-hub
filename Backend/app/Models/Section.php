@@ -15,6 +15,7 @@ class Section extends Model
         'name',
         'course_id',
         'year_level',
+        'capacity',
         'academic_year',
         'is_active',
     ];

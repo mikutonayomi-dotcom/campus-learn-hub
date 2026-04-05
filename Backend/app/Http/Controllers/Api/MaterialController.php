@@ -42,9 +42,14 @@ class MaterialController extends Controller
             'external_link' => 'nullable|url',
         ]);
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $material = Material::create([
             ...$validated,
-            'uploaded_by' => $request->user()->faculty->id,
+            'uploaded_by' => $faculty->id,
             'is_published' => true,
         ]);
 
@@ -81,6 +86,9 @@ class MaterialController extends Controller
     {
         if ($request->user()->isStudent()) {
             $student = $request->user()->student;
+            if (!$student) {
+                return response()->json([]);
+            }
             $subjectIds = \App\Models\Schedule::whereHas('section', function ($q) use ($student) {
                 $q->where('name', $student->section)
                   ->where('course_id', $student->course_id);
@@ -92,8 +100,12 @@ class MaterialController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
         } else {
+            $faculty = $request->user()->faculty;
+            if (!$faculty) {
+                return response()->json([]);
+            }
             $materials = Material::with(['subject', 'uploader.user'])
-                ->where('uploaded_by', $request->user()->faculty->id)
+                ->where('uploaded_by', $faculty->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
         }

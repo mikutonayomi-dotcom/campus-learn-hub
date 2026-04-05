@@ -16,6 +16,7 @@ class Student extends Model
         'user_id',
         'student_id',
         'course_id',
+        'section_id',
         'section',
         'year_level',
         'contact_number',
@@ -34,6 +35,11 @@ class Student extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class);
     }
 
     public function violations(): HasMany

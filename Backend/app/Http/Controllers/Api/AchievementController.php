@@ -29,7 +29,10 @@ class AchievementController extends Controller
         }
 
         if ($request->has('my_achievements') && $request->user()->isStudent()) {
-            $query->where('student_id', $request->user()->student->id);
+            $student = $request->user()->student;
+            if ($student) {
+                $query->where('student_id', $student->id);
+            }
         }
 
         return response()->json($query->orderBy('created_at', 'desc')->get());
@@ -47,9 +50,14 @@ class AchievementController extends Controller
             'proof_path' => 'nullable|string',
         ]);
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $achievement = Achievement::create([
             ...$validated,
-            'recorded_by' => $request->user()->faculty->id,
+            'recorded_by' => $faculty->id,
             'status' => 'pending',
         ]);
 

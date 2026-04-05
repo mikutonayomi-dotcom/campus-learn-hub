@@ -29,7 +29,10 @@ class SubmissionController extends Controller
         }
 
         if ($request->has('my_submissions') && $request->user()->isStudent()) {
-            $query->where('student_id', $request->user()->student->id);
+            $student = $request->user()->student;
+            if ($student) {
+                $query->where('student_id', $student->id);
+            }
         }
 
         return response()->json($query->orderBy('created_at', 'desc')->get());
@@ -44,10 +47,15 @@ class SubmissionController extends Controller
             'external_link' => 'nullable|url',
         ]);
 
+        $student = $request->user()->student;
+        if (!$student) {
+            return response()->json(['message' => 'Student profile not found'], 404);
+        }
+
         $material = \App\Models\Material::findOrFail($validated['material_id']);
 
         // Check if already submitted
-        $existing = Submission::where('student_id', $request->user()->student->id)
+        $existing = Submission::where('student_id', $student->id)
             ->where('material_id', $validated['material_id'])
             ->first();
 
@@ -62,7 +70,7 @@ class SubmissionController extends Controller
 
         $submission = Submission::create([
             ...$validated,
-            'student_id' => $request->user()->student->id,
+            'student_id' => $student->id,
             'status' => 'submitted',
             'submitted_at' => now(),
         ]);
@@ -104,10 +112,15 @@ class SubmissionController extends Controller
             'feedback' => 'nullable|string',
         ]);
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $submission->update([
             'grade' => $validated['grade'],
             'feedback' => $validated['feedback'] ?? null,
-            'graded_by' => $request->user()->faculty->id,
+            'graded_by' => $faculty->id,
             'graded_at' => now(),
             'status' => 'graded',
         ]);
@@ -127,8 +140,14 @@ class SubmissionController extends Controller
 
     public function mySubmissions(Request $request)
     {
+        $student = $request->user()->student;
+        
+        if (!$student) {
+            return response()->json([]);
+        }
+        
         $submissions = Submission::with(['material.subject', 'grader.user'])
-            ->where('student_id', $request->user()->student->id)
+            ->where('student_id', $student->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -137,7 +156,12 @@ class SubmissionController extends Controller
 
     public function submissionsToGrade(Request $request)
     {
-        $facultyId = $request->user()->faculty->id;
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json([]);
+        }
+        
+        $facultyId = $faculty->id;
         $materialIds = \App\Models\Material::where('uploaded_by', $facultyId)->pluck('id');
 
         $submissions = Submission::with(['student.user', 'material.subject'])

@@ -29,7 +29,10 @@ class ViolationController extends Controller
         }
 
         if ($request->has('my_violations') && $request->user()->isStudent()) {
-            $query->where('student_id', $request->user()->student->id);
+            $student = $request->user()->student;
+            if ($student) {
+                $query->where('student_id', $student->id);
+            }
         }
 
         return response()->json($query->orderBy('created_at', 'desc')->get());
@@ -46,9 +49,14 @@ class ViolationController extends Controller
             'evidence_path' => 'nullable|string',
         ]);
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $violation = Violation::create([
             ...$validated,
-            'reported_by' => $request->user()->faculty->id,
+            'reported_by' => $faculty->id,
             'status' => 'pending',
         ]);
 

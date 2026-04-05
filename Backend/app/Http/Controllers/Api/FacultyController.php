@@ -32,7 +32,10 @@ class FacultyController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string',
+            'firstname' => 'required|string',
+            'middlename' => 'nullable|string',
+            'lastname' => 'required|string',
+            'suffix' => 'nullable|string',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:8',
             'employee_id' => 'required|string|unique:faculty',
@@ -43,8 +46,18 @@ class FacultyController extends Controller
             'office_location' => 'nullable|string',
         ]);
 
+        // Build full name from parts
+        $fullName = $validated['firstname'];
+        if (!empty($validated['middlename'])) {
+            $fullName .= ' ' . $validated['middlename'];
+        }
+        $fullName .= ' ' . $validated['lastname'];
+        if (!empty($validated['suffix'])) {
+            $fullName .= ' ' . $validated['suffix'];
+        }
+
         $user = User::create([
-            'name' => $validated['name'],
+            'name' => $fullName,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'faculty',
@@ -100,6 +113,13 @@ class FacultyController extends Controller
     public function myProfile(Request $request)
     {
         $faculty = $request->user()->faculty;
+        
+        if (!$faculty) {
+            return response()->json([
+                'message' => 'Faculty profile not found. Please contact administrator to set up your faculty profile.'
+            ], 404);
+        }
+        
         return response()->json($faculty->load([
             'user', 'schedules.subject', 'schedules.section', 'schedules.room'
         ]));
@@ -109,10 +129,18 @@ class FacultyController extends Controller
     {
         $faculty = $request->user()->faculty;
         
+        if (!$faculty) {
+            return response()->json([]);
+        }
+        
         $sectionIds = $faculty->schedules()
             ->pluck('section_id')
             ->unique()
             ->toArray();
+
+        if (empty($sectionIds)) {
+            return response()->json([]);
+        }
 
         $students = \App\Models\Student::with('user', 'course')
             ->whereIn('section', function ($query) use ($sectionIds) {
@@ -123,5 +151,15 @@ class FacultyController extends Controller
             ->get();
 
         return response()->json($students);
+    }
+
+    public function getNextEmployeeId()
+    {
+        $currentYear = date('Y');
+        $count = Faculty::whereYear('created_at', $currentYear)->count();
+        $nextNumber = str_pad($count + 1, 2, '0', STR_PAD_LEFT);
+        $nextId = 'FC-' . $currentYear . '-' . $nextNumber;
+        
+        return response()->json(['next_id' => $nextId]);
     }
 }

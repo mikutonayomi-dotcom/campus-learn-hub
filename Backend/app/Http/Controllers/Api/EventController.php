@@ -29,7 +29,10 @@ class EventController extends Controller
         }
 
         if ($request->has('my_events') && $request->user()->isFaculty()) {
-            $query->where('organized_by', $request->user()->faculty->id);
+            $faculty = $request->user()->faculty;
+            if ($faculty) {
+                $query->where('organized_by', $faculty->id);
+            }
         }
 
         return response()->json($query->orderBy('start_date', 'asc')->get());
@@ -46,9 +49,14 @@ class EventController extends Controller
             'venue' => 'nullable|string',
         ]);
 
+        $faculty = $request->user()->faculty;
+        if (!$faculty) {
+            return response()->json(['message' => 'Faculty profile not found'], 404);
+        }
+
         $event = Event::create([
             ...$validated,
-            'organized_by' => $request->user()->faculty->id,
+            'organized_by' => $faculty->id,
             'status' => 'draft',
         ]);
 
@@ -130,6 +138,9 @@ class EventController extends Controller
     public function join(Event $event, Request $request)
     {
         $student = $request->user()->student;
+        if (!$student) {
+            return response()->json(['message' => 'Student profile not found'], 404);
+        }
 
         if ($event->participants()->where('student_id', $student->id)->exists()) {
             return response()->json(['message' => 'Already registered for this event'], 422);

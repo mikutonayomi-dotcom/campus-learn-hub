@@ -33,6 +33,7 @@ class SectionController extends Controller
             'name' => 'required|string',
             'course_id' => 'required|exists:courses,id',
             'year_level' => 'required|integer|min:1|max:5',
+            'capacity' => 'required|integer|min:1|max:100',
             'academic_year' => 'required|string',
         ]);
 
@@ -50,6 +51,7 @@ class SectionController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'year_level' => 'sometimes|integer|min:1|max:5',
+            'capacity' => 'sometimes|integer|min:1|max:100',
             'academic_year' => 'sometimes|string',
             'is_active' => 'sometimes|boolean',
         ]);
@@ -66,11 +68,17 @@ class SectionController extends Controller
 
     public function students(Section $section)
     {
+        // Get students enrolled in this section through section_id relationship
         $students = \App\Models\Student::with('user', 'course')
-            ->where('section', $section->name)
-            ->where('course_id', $section->course_id)
+            ->where('section_id', $section->id)
             ->get();
 
-        return response()->json($students);
+        return response()->json([
+            'section' => $section->load('course'),
+            'students' => $students,
+            'student_count' => $students->count(),
+            'capacity' => $section->capacity,
+            'available_slots' => $section->capacity - $students->count(),
+        ]);
     }
 }

@@ -105,8 +105,13 @@ class SkillController extends Controller
 
     public function mySkills(Request $request)
     {
+        $student = $request->user()->student;
+        if (!$student) {
+            return response()->json([]);
+        }
+
         $skills = StudentSkill::with('skill')
-            ->where('student_id', $request->user()->student->id)
+            ->where('student_id', $student->id)
             ->get();
 
         return response()->json($skills);
