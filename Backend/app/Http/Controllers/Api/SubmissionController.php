@@ -10,10 +10,14 @@ class SubmissionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Submission::with(['student.user', 'material.subject', 'grader.user']);
+        $query = Submission::with(['student.user', 'assignment.subject', 'material.subject', 'grader.user']);
 
         if ($request->has('student_id')) {
             $query->where('student_id', $request->student_id);
+        }
+
+        if ($request->has('assignment_id')) {
+            $query->where('assignment_id', $request->assignment_id);
         }
 
         if ($request->has('material_id')) {
@@ -41,8 +45,12 @@ class SubmissionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'material_id' => 'required|exists:materials,id',
+            'assignment_id' => 'nullable|exists:assignments,id',
+            'material_id' => 'nullable|exists:materials,id',
+            'subject_id' => 'nullable|exists:subjects,id',
+            'title' => 'nullable|string',
             'content' => 'nullable|string',
+            'description' => 'nullable|string',
             'file_path' => 'nullable|string',
             'external_link' => 'nullable|url',
         ]);
@@ -52,20 +60,56 @@ class SubmissionController extends Controller
             return response()->json(['message' => 'Student profile not found'], 404);
         }
 
-        $material = \App\Models\Material::findOrFail($validated['material_id']);
+        // Handle file upload if present
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            
+            // Validate file is valid
+            if (!$file->isValid()) {
+                return response()->json(['error' => 'File upload failed'], 400);
+            }
+            
+            $path = $file->store('submissions', 'public');
+            $validated['file_path'] = $path;
+            $validated['original_filename'] = $file->getClientOriginalName();
+        }
 
-        // Check if already submitted
-        $existing = Submission::where('student_id', $student->id)
-            ->where('material_id', $validated['material_id'])
-            ->first();
+        // Use assignment_id if provided, otherwise use material_id for backward compatibility
+        $assignmentId = $validated['assignment_id'] ?? null;
+        $materialId = $validated['material_id'] ?? null;
+        
+        if ($assignmentId) {
+            $assignment = \App\Models\Assignment::findOrFail($assignmentId);
 
-        if ($existing) {
-            $existing->update([
-                ...$validated,
-                'status' => 'resubmitted',
-                'submitted_at' => now(),
-            ]);
-            return response()->json($existing->load(['material.subject', 'student.user']), 200);
+            // Check if already submitted
+            $existing = Submission::where('student_id', $student->id)
+                ->where('assignment_id', $assignmentId)
+                ->first();
+
+            if ($existing) {
+                $existing->update([
+                    ...$validated,
+                    'status' => 'resubmitted',
+                    'submitted_at' => now(),
+                ]);
+                return response()->json($existing->load(['assignment.subject', 'student.user']), 200);
+            }
+        } elseif ($materialId) {
+            $material = \App\Models\Material::findOrFail($materialId);
+
+            // Check if already submitted
+            $existing = Submission::where('student_id', $student->id)
+                ->where('material_id', $materialId)
+                ->first();
+
+            if ($existing) {
+                $existing->update([
+                    ...$validated,
+                    'status' => 'resubmitted',
+                    'submitted_at' => now(),
+                ]);
+                return response()->json($existing->load(['material.subject', 'student.user']), 200);
+            }
         }
 
         $submission = Submission::create([
@@ -75,12 +119,12 @@ class SubmissionController extends Controller
             'submitted_at' => now(),
         ]);
 
-        return response()->json($submission->load(['material.subject', 'student.user']), 201);
+        return response()->json($submission->load(['assignment.subject', 'material.subject', 'student.user']), 201);
     }
 
     public function show(Submission $submission)
     {
-        return response()->json($submission->load(['student.user', 'material.subject', 'grader.user']));
+        return response()->json($submission->load(['student.user', 'assignment.subject', 'material.subject', 'grader.user']));
     }
 
     public function update(Request $request, Submission $submission)
@@ -102,7 +146,7 @@ class SubmissionController extends Controller
             'submitted_at' => now(),
         ]);
 
-        return response()->json($submission->load(['student.user', 'material.subject']));
+        return response()->json($submission->load(['student.user', 'assignment.subject', 'material.subject']));
     }
 
     public function grade(Request $request, Submission $submission)
@@ -125,7 +169,7 @@ class SubmissionController extends Controller
             'status' => 'graded',
         ]);
 
-        return response()->json($submission->load(['student.user', 'material.subject', 'grader.user']));
+        return response()->json($submission->load(['student.user', 'assignment.subject', 'material.subject', 'grader.user']));
     }
 
     public function destroy(Submission $submission)
@@ -146,7 +190,7 @@ class SubmissionController extends Controller
             return response()->json([]);
         }
         
-        $submissions = Submission::with(['material.subject', 'grader.user'])
+        $submissions = Submission::with(['assignment.subject', 'material.subject', 'grader.user'])
             ->where('student_id', $student->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -162,10 +206,14 @@ class SubmissionController extends Controller
         }
         
         $facultyId = $faculty->id;
+        $assignmentIds = \App\Models\Assignment::where('faculty_id', $facultyId)->pluck('id');
         $materialIds = \App\Models\Material::where('uploaded_by', $facultyId)->pluck('id');
 
-        $submissions = Submission::with(['student.user', 'material.subject'])
-            ->whereIn('material_id', $materialIds)
+        $submissions = Submission::with(['student.user', 'assignment.subject', 'material.subject'])
+            ->where(function($query) use ($assignmentIds, $materialIds) {
+                $query->whereIn('assignment_id', $assignmentIds)
+                      ->orWhereIn('material_id', $materialIds);
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 

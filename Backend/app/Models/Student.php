@@ -17,14 +17,21 @@ class Student extends Model
         'student_id',
         'course_id',
         'section_id',
-        'section',
         'year_level',
+        'semester',
         'contact_number',
         'address',
         'emergency_contact_name',
         'emergency_contact_number',
         'medical_records',
         'status',
+        'mother_name',
+        'father_name',
+        'guardian_name',
+        'gender',
+        'birthday',
+        'birthplace',
+        'religion',
     ];
 
     public function user(): BelongsTo
@@ -40,6 +47,63 @@ class Student extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class);
+    }
+
+    public function subjects()
+    {
+        if (!$this->section_id) {
+            return collect();
+        }
+        return Schedule::where('section_id', $this->section_id)
+            ->with('subject.course')
+            ->get()
+            ->pluck('subject')
+            ->filter()
+            ->unique('id')
+            ->values();
+    }
+
+    public function curriculumSubjects()
+    {
+        if (!$this->course_id) {
+            return collect();
+        }
+        // Normalize semester: "1st" -> "1", "2nd" -> "2"
+        $normalizedSemester = str_replace(['st', 'nd', 'rd', 'th'], '', $this->semester);
+        return CourseSubject::where('course_id', $this->course_id)
+            ->where('year_level', $this->year_level)
+            ->where('semester', $normalizedSemester)
+            ->with('subject.course')
+            ->get()
+            ->pluck('subject')
+            ->filter()
+            ->unique('id')
+            ->values();
+    }
+
+    public function schedules()
+    {
+        if (!$this->section_id) {
+            return collect();
+        }
+        // Get all curriculum subjects for the student
+        $curriculumSubjects = $this->curriculumSubjects();
+        
+        // Get schedules for the student's section
+        $sectionSchedules = Schedule::where('section_id', $this->section_id)
+            ->with(['subject', 'faculty.user', 'room'])
+            ->get()
+            ->keyBy('subject_id');
+        
+        // Combine curriculum subjects with their schedules
+        return $curriculumSubjects->map(function ($subject) use ($sectionSchedules) {
+            $schedule = $sectionSchedules->get($subject->id);
+            return [
+                'subject' => $subject,
+                'schedule' => $schedule,
+                'has_schedule' => $schedule !== null,
+            ];
+        })->values();
     }
 
     public function violations(): HasMany

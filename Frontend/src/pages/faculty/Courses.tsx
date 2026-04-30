@@ -1,63 +1,122 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, FileText, Video, Link } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+  BookOpen, Search, Users, Clock, MapPin, Loader2, 
+  ChevronRight
+} from "lucide-react";
+import { useMyClasses } from "@/hooks/useApi";
+import { useNavigate } from "react-router-dom";
 
-const courses = [
-  {
-    code: "IT101", name: "Introduction to Computing", section: "1A",
-    materials: [
-      { title: "Chapter 1 - History of Computing", type: "PDF", date: "Mar 25" },
-      { title: "Lecture 1 Video", type: "Video", date: "Mar 20" },
-    ]
-  },
-  {
-    code: "IT301", name: "Web Development", section: "3A",
-    materials: [
-      { title: "HTML/CSS Basics", type: "PDF", date: "Mar 28" },
-      { title: "React Tutorial Link", type: "Link", date: "Mar 27" },
-      { title: "Project Guidelines", type: "PDF", date: "Mar 15" },
-    ]
-  },
-];
+const FacultyCourses = () => {
+  const navigate = useNavigate();
+  const { data: classes, isLoading } = useMyClasses();
+  const [searchTerm, setSearchTerm] = useState("");
 
-const typeIcons: Record<string, React.ElementType> = { PDF: FileText, Video: Video, Link: Link };
+  const filteredClasses = classes?.filter((classItem: any) =>
+    classItem.subject?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    classItem.subject?.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    classItem.section?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
-const FacultyCourses = () => (
-  <div className="space-y-6 animate-fade-in">
-    <div className="flex justify-between items-start">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2"><BookOpen className="h-6 w-6 text-primary" /> Courses & Materials</h1>
-        <p className="text-muted-foreground text-sm">Manage syllabus, lessons, and learning materials</p>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-      <Button className="gap-2 transition-all duration-200 hover:scale-105"><Plus className="h-4 w-4" /> Upload Material</Button>
-    </div>
-    {courses.map((c) => (
-      <Card key={c.code} className="transition-shadow duration-300 hover:shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span className="text-primary font-mono">{c.code}</span> {c.name}
-            <Badge variant="outline" className="ml-auto">Section {c.section}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {c.materials.map((m, i) => {
-              const Icon = typeIcons[m.type] || FileText;
-              return (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 transition-all duration-200 hover:bg-muted cursor-pointer group">
-                  <Icon className="h-4 w-4 text-primary shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                  <span className="flex-1 text-sm font-medium">{m.title}</span>
-                  <Badge variant="secondary" className="text-xs">{m.type}</Badge>
-                  <span className="text-xs text-muted-foreground">{m.date}</span>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">My Classes</h1>
+          <p className="text-muted-foreground text-sm">
+            View and manage your assigned classes
+          </p>
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search classes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {filteredClasses.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredClasses.map((classItem: any) => (
+            <Card 
+              key={`${classItem.subject_id}-${classItem.section_id}`} 
+              className="hover:shadow-lg transition-all cursor-pointer group"
+              onClick={() => navigate(`/faculty/courses/${classItem.subject_id}/${classItem.section_id}`)}
+            >
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                        {classItem.subject?.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{classItem.subject?.code}</p>
+                    </div>
+                    <Badge variant="secondary">{classItem.subject?.units} unit{classItem.subject?.units > 1 ? 's' : ''}</Badge>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>Section: {classItem.section?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{classItem.students_count} students</span>
+                    </div>
+                    {classItem.room && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{classItem.room?.name || classItem.room?.code}</span>
+                      </div>
+                    )}
+                    {classItem.schedules && classItem.schedules.length > 0 && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{classItem.schedules.length} schedule{classItem.schedules.length > 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full group-hover:bg-primary group-hover:text-primary-foreground"
+                  >
+                    Manage Class
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-);
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No classes found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Try a different search term' : 'You have not been assigned to any classes yet'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
 
 export default FacultyCourses;

@@ -24,7 +24,14 @@ class SectionController extends Controller
             $query->where('academic_year', $request->academic_year);
         }
 
-        return response()->json($query->get());
+        $sections = $query->get();
+
+        // Append students_count to each section
+        $sections->each(function ($section) {
+            $section->students_count = $section->students()->count();
+        });
+
+        return response()->json($sections);
     }
 
     public function store(Request $request)
@@ -33,11 +40,13 @@ class SectionController extends Controller
             'name' => 'required|string',
             'course_id' => 'required|exists:courses,id',
             'year_level' => 'required|integer|min:1|max:5',
+            'semester' => 'required|in:1st,2nd',
             'capacity' => 'required|integer|min:1|max:100',
             'academic_year' => 'required|string',
         ]);
 
         $section = Section::create($validated);
+
         return response()->json($section->load('course'), 201);
     }
 
@@ -51,6 +60,7 @@ class SectionController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'year_level' => 'sometimes|integer|min:1|max:5',
+            'semester' => 'sometimes|in:1st,2nd',
             'capacity' => 'sometimes|integer|min:1|max:100',
             'academic_year' => 'sometimes|string',
             'is_active' => 'sometimes|boolean',

@@ -23,12 +23,38 @@ class AuthController extends Controller
             'role' => 'nullable|string|in:admin,faculty,student',
         ]);
 
+        // Split name into first and last name
+        $nameParts = explode(' ', $request->name, 2);
+        $firstName = $nameParts[0];
+        $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
+
         $user = User::create([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role ?? 'student',
+            'is_active' => true,
         ]);
+
+        // Create profile based on role
+        if ($user->role === 'student') {
+            \App\Models\Student::create([
+                'user_id' => $user->id,
+                'student_id' => 'TEMP-' . str_pad($user->id, 5, '0', STR_PAD_LEFT),
+                'status' => 'regular',
+            ]);
+        } elseif ($user->role === 'faculty') {
+            \App\Models\Faculty::create([
+                'user_id' => $user->id,
+                'employee_id' => 'TEMP-' . str_pad($user->id, 5, '0', STR_PAD_LEFT),
+                'department' => 'CCS',
+                'position' => 'Instructor',
+                'employment_status' => 'Full-time',
+                'is_active' => true,
+            ]);
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -96,12 +122,21 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $request->user()->id,
+            'profile_image' => 'sometimes|image|max:2048',
         ]);
 
-        $request->user()->update($request->only(['name', 'email']));
+        $user = $request->user();
+
+        if ($request->hasFile('profile_image')) {
+            $file = $request->file('profile_image');
+            $path = $file->store('profile-images', 'public');
+            $user->update(['profile_image' => $path]);
+        }
+
+        $user->update($request->only(['name', 'email']));
 
         return response()->json([
-            'user' => $request->user(),
+            'user' => $user,
             'message' => 'Profile updated successfully',
         ]);
     }

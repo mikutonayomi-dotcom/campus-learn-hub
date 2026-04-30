@@ -18,10 +18,18 @@ class Faculty extends Model
         'employee_id',
         'department',
         'position',
+        'employment_status',
         'specialization',
+        'educational_attainment',
         'contact_number',
         'office_location',
         'is_active',
+        'mother_name',
+        'father_name',
+        'gender',
+        'birthday',
+        'birthplace',
+        'religion',
     ];
 
     protected $casts = [

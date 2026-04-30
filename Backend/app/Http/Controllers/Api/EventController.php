@@ -10,7 +10,23 @@ class EventController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Event::with(['organizer.user', 'approver', 'participants.user']);
+        $query = Event::with(['organizer', 'approver', 'participants.user']);
+
+        // Role-based visibility
+        if ($request->user()->isStudent()) {
+            // Students only see approved events
+            $query->where('status', 'approved');
+        } elseif ($request->user()->isFaculty()) {
+            // Faculty see their own events and approved events
+            $faculty = $request->user()->faculty;
+            if ($faculty) {
+                $query->where(function ($q) use ($faculty) {
+                    $q->where('organized_by', $faculty->id)
+                      ->orWhere('status', 'approved');
+                });
+            }
+        }
+        // Admin sees all events (no filtering)
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -49,31 +65,41 @@ class EventController extends Controller
             'venue' => 'nullable|string',
         ]);
 
-        $faculty = $request->user()->faculty;
-        if (!$faculty) {
-            return response()->json(['message' => 'Faculty profile not found'], 404);
+        $organizerId = null;
+        $organizerType = null;
+
+        if ($request->user()->isAdmin()) {
+            // Admin can create events, organized_by references user_id
+            $organizerId = $request->user()->id;
+            $organizerType = 'admin';
+        } elseif ($request->user()->isFaculty()) {
+            $faculty = $request->user()->faculty;
+            if (!$faculty) {
+                return response()->json(['message' => 'Faculty profile not found'], 404);
+            }
+            $organizerId = $faculty->id;
+            $organizerType = 'faculty';
+        } else {
+            return response()->json(['message' => 'Unauthorized to create events'], 403);
         }
 
         $event = Event::create([
             ...$validated,
-            'organized_by' => $faculty->id,
-            'status' => 'draft',
+            'organized_by' => $organizerId,
+            'organizer_type' => $organizerType,
+            'status' => 'approved',
         ]);
 
-        return response()->json($event->load(['organizer.user']), 201);
+        return response()->json($event->load(['organizer']), 201);
     }
 
     public function show(Event $event)
     {
-        return response()->json($event->load(['organizer.user', 'approver', 'participants.user']));
+        return response()->json($event->load(['organizer', 'approver', 'participants.user']));
     }
 
     public function update(Request $request, Event $event)
     {
-        if ($event->status === 'approved' && $request->user()->isFaculty()) {
-            return response()->json(['message' => 'Cannot edit approved event'], 403);
-        }
-
         $validated = $request->validate([
             'title' => 'sometimes|string',
             'description' => 'sometimes|string',
@@ -84,7 +110,7 @@ class EventController extends Controller
         ]);
 
         $event->update($validated);
-        return response()->json($event->load(['organizer.user', 'participants.user']));
+        return response()->json($event->load(['organizer', 'participants.user']));
     }
 
     public function destroy(Event $event)
@@ -100,7 +126,7 @@ class EventController extends Controller
         }
 
         $event->update(['status' => 'pending']);
-        return response()->json($event->load(['organizer.user']));
+        return response()->json($event->load(['organizer']));
     }
 
     public function approve(Request $request, Event $event)
@@ -116,7 +142,7 @@ class EventController extends Controller
             'approved_at' => now(),
         ]);
 
-        return response()->json($event->load(['organizer.user', 'approver']));
+        return response()->json($event->load(['organizer', 'approver']));
     }
 
     public function reject(Request $request, Event $event)
@@ -132,7 +158,7 @@ class EventController extends Controller
             'approved_at' => now(),
         ]);
 
-        return response()->json($event->load(['organizer.user', 'approver']));
+        return response()->json($event->load(['organizer', 'approver']));
     }
 
     public function join(Event $event, Request $request)
@@ -178,7 +204,7 @@ class EventController extends Controller
 
     public function upcomingEvents()
     {
-        $events = Event::with(['organizer.user'])
+        $events = Event::with(['organizer'])
             ->where('status', 'approved')
             ->where('start_date', '>=', now())
             ->orderBy('start_date', 'asc')

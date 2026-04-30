@@ -18,6 +18,7 @@ class Material extends Model
         'description',
         'type',
         'file_path',
+        'original_filename',
         'external_link',
         'is_published',
     ];
@@ -34,10 +35,5 @@ class Material extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(Faculty::class, 'uploaded_by');
-    }
-
-    public function submissions(): HasMany
-    {
-        return $this->hasMany(Submission::class);
     }
 }

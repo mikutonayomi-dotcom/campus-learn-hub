@@ -12,29 +12,30 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import FacultyDashboard from "./pages/faculty/Dashboard";
 import StudentDashboard from "./pages/student/Dashboard";
 import AdminUsers from "./pages/admin/Users";
-import AdminLogs from "./pages/admin/Logs";
-import AdminApprovals from "./pages/admin/Approvals";
-import AdminAcademics from "./pages/admin/Academics";
 import AdminCourses from "./pages/admin/Courses";
 import AdminSections from "./pages/admin/Sections";
-import AdminSchedules from "./pages/admin/Schedules";
-import AdminFacilities from "./pages/admin/Facilities";
+import AdminCourseSubjects from "./pages/admin/CourseSubjects";
+import AdminRooms from "./pages/admin/Rooms";
+import AdminScheduling from "./pages/admin/Scheduling";
+import AdminViolations from "./pages/admin/Violations";
+import AdminOrganizations from "./pages/admin/Organizations";
 import AdminEvents from "./pages/admin/Events";
-import AdminSearch from "./pages/admin/Search";
 import AdminReports from "./pages/admin/Reports";
-import AdminSettings from "./pages/admin/Settings";
 import FacultyStudents from "./pages/faculty/Students";
 import FacultyViolations from "./pages/faculty/Violations";
 import FacultyAchievements from "./pages/faculty/Achievements";
 import FacultyCourses from "./pages/faculty/Courses";
-import FacultySubmissions from "./pages/faculty/Submissions";
+import FacultyCourseDetail from "./pages/faculty/CourseDetail";
+import FacultySubjects from "./pages/faculty/Subjects";
+import FacultySubjectDetail from "./pages/faculty/SubjectDetail";
+import FacultyProfile from "./pages/faculty/Profile";
 import FacultySchedule from "./pages/faculty/Schedule";
 import FacultyEvents from "./pages/faculty/Events";
 import FacultyReports from "./pages/faculty/Reports";
 import StudentProfile from "./pages/student/Profile";
 import StudentAcademics from "./pages/student/Academics";
-import StudentMaterials from "./pages/student/Materials";
-import StudentSubmissions from "./pages/student/Submissions";
+import StudentSubjectDetail from "./pages/student/SubjectDetail";
+import StudentSchedule from "./pages/student/Schedule";
 import StudentViolations from "./pages/student/Violations";
 import StudentAchievements from "./pages/student/Achievements";
 import StudentEvents from "./pages/student/Events";
@@ -46,29 +47,28 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
             <Routes>
               <Route path="/" element={<Login />} />
+              <Route path="/login" element={<Login />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><DashboardLayout role="admin" /></ProtectedRoute>}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
-                <Route path="logs" element={<AdminLogs />} />
-                <Route path="approvals" element={<AdminApprovals />} />
-                <Route path="academics" element={<AdminAcademics />} />
                 <Route path="courses" element={<AdminCourses />} />
+                <Route path="course-subjects" element={<AdminCourseSubjects />} />
                 <Route path="sections" element={<AdminSections />} />
-                <Route path="schedules" element={<AdminSchedules />} />
-                <Route path="facilities" element={<AdminFacilities />} />
+                <Route path="rooms" element={<AdminRooms />} />
+                <Route path="scheduling" element={<AdminScheduling />} />
+                <Route path="violations" element={<AdminViolations />} />
+                <Route path="organizations" element={<AdminOrganizations />} />
                 <Route path="events" element={<AdminEvents />} />
-                <Route path="search" element={<AdminSearch />} />
                 <Route path="reports" element={<AdminReports />} />
-                <Route path="settings" element={<AdminSettings />} />
               </Route>
 
               {/* Faculty Routes */}
@@ -78,7 +78,10 @@ const App = () => (
                 <Route path="violations" element={<FacultyViolations />} />
                 <Route path="achievements" element={<FacultyAchievements />} />
                 <Route path="courses" element={<FacultyCourses />} />
-                <Route path="submissions" element={<FacultySubmissions />} />
+                <Route path="courses/:subjectId/:sectionId" element={<FacultyCourseDetail />} />
+                <Route path="subjects" element={<FacultySubjects />} />
+                <Route path="subjects/:subjectId" element={<FacultySubjectDetail />} />
+                <Route path="profile" element={<FacultyProfile />} />
                 <Route path="schedule" element={<FacultySchedule />} />
                 <Route path="events" element={<FacultyEvents />} />
                 <Route path="reports" element={<FacultyReports />} />
@@ -89,8 +92,8 @@ const App = () => (
                 <Route index element={<StudentDashboard />} />
                 <Route path="profile" element={<StudentProfile />} />
                 <Route path="academics" element={<StudentAcademics />} />
-                <Route path="materials" element={<StudentMaterials />} />
-                <Route path="submissions" element={<StudentSubmissions />} />
+                <Route path="academics/:subjectId" element={<StudentSubjectDetail />} />
+                <Route path="schedule" element={<StudentSchedule />} />
                 <Route path="violations" element={<StudentViolations />} />
                 <Route path="achievements" element={<StudentAchievements />} />
                 <Route path="events" element={<StudentEvents />} />

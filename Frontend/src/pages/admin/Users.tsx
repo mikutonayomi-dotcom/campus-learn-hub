@@ -5,19 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Search, UserPlus, Eye, Edit2, GraduationCap, BookOpen, Loader2, 
-  Mail, Phone, Building, User, EyeOff 
+  Mail, Phone, Building, EyeOff, Trash2, Filter, X, User
 } from "lucide-react";
 import { 
-  useStudents, useFaculty, useCourses, useSections,
+  useStudents, useFaculty, useCourses, useSections, useSkills, useOrganizations,
   useCreateStudent, useCreateFaculty, 
   useUpdateStudent, useUpdateFaculty,
+  useDeleteStudent, useDeleteFaculty,
   useNextStudentId, useNextFacultyId
 } from "@/hooks/useApi";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +34,7 @@ interface StudentData {
     name: string;
     email: string;
     is_active: boolean;
+    created_at: string;
   };
   student_id: string;
   course_id: number;
@@ -53,6 +56,7 @@ interface FacultyData {
     name: string;
     email: string;
     is_active: boolean;
+    created_at: string;
   };
   employee_id: string;
   department: string;
@@ -75,20 +79,23 @@ const AdminUsers = () => {
   // Student Profile View states
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [isStudentProfileOpen, setIsStudentProfileOpen] = useState(false);
-  
+
+  // Section filter states
+  const [sectionFilterCourseId, setSectionFilterCourseId] = useState("");
+  const [sectionFilterYearLevel, setSectionFilterYearLevel] = useState("");
+
+  // Advanced filter states
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filterCourseId, setFilterCourseId] = useState("");
+  const [filterYearLevel, setFilterYearLevel] = useState("");
+  const [filterSemester, setFilterSemester] = useState("");
+  const [filterSkillIds, setFilterSkillIds] = useState<number[]>([]);
+  const [filterHasViolations, setFilterHasViolations] = useState<string>("");
+  const [filterViolationSeverity, setFilterViolationSeverity] = useState("");
+  const [filterHasAchievements, setFilterHasAchievements] = useState<string>("");
+  const [filterOrganizationIds, setFilterOrganizationIds] = useState<number[]>([]);
+
   const { toast } = useToast();
-  
-  const { data: students, isLoading: studentsLoading } = useStudents(searchTerm ? { search: searchTerm } : undefined);
-  const { data: faculty, isLoading: facultyLoading } = useFaculty();
-  const { data: courses } = useCourses();
-  const { data: sections } = useSections();
-  const { data: nextStudentId, refetch: refetchNextStudentId } = useNextStudentId();
-  const { data: nextFacultyId, refetch: refetchNextFacultyId } = useNextFacultyId();
-  
-  const createStudent = useCreateStudent();
-  const createFaculty = useCreateFaculty();
-  const updateStudent = useUpdateStudent();
-  const updateFaculty = useUpdateFaculty();
 
   // Form states for creating new user
   const [newUserForm, setNewUserForm] = useState({
@@ -103,16 +110,62 @@ const AdminUsers = () => {
     course_id: "",
     section_id: "",
     year_level: "1",
+    semester: "1st",
     contact_number: "",
     address: "",
     emergency_contact_name: "",
     emergency_contact_number: "",
+    mother_name: "",
+    father_name: "",
+    guardian_name: "",
+    gender: "",
+    birthday: "",
+    birthplace: "",
+    religion: "",
     employee_id: "",
     department: "",
     position: "",
+    employment_status: "Full-time",
     specialization: "",
+    educational_attainment: "",
     office_location: "",
   });
+
+  const { data: students, isLoading: studentsLoading } = useStudents(
+    searchTerm || filterCourseId || filterYearLevel || filterSemester || 
+    filterSkillIds.length > 0 || filterHasViolations || filterViolationSeverity || 
+    filterHasAchievements || filterOrganizationIds.length > 0
+      ? { 
+        search: searchTerm || undefined,
+        course_id: filterCourseId ? parseInt(filterCourseId) : undefined,
+        year_level: filterYearLevel ? parseInt(filterYearLevel) : undefined,
+        semester: filterSemester || undefined,
+        skill_ids: filterSkillIds.length > 0 ? filterSkillIds.join(',') : undefined,
+        has_violations: filterHasViolations || undefined,
+        violation_severity: filterViolationSeverity || undefined,
+        has_achievements: filterHasAchievements || undefined,
+        organization_ids: filterOrganizationIds.length > 0 ? filterOrganizationIds.join(',') : undefined,
+      }
+      : undefined
+  );
+  const { data: faculty, isLoading: facultyLoading } = useFaculty();
+  const { data: courses } = useCourses();
+  const { data: sections } = useSections(
+    sectionFilterCourseId && sectionFilterYearLevel
+      ? { course_id: parseInt(sectionFilterCourseId), year_level: parseInt(sectionFilterYearLevel) }
+      : undefined
+  );
+  const { data: skills } = useSkills();
+  const { data: organizations } = useOrganizations();
+  const { data: nextStudentId, refetch: refetchNextStudentId } = useNextStudentId();
+  const { data: nextFacultyId, refetch: refetchNextFacultyId } = useNextFacultyId();
+
+  const createStudent = useCreateStudent();
+  const createFaculty = useCreateFaculty();
+  const updateStudent = useUpdateStudent();
+  const deleteStudent = useDeleteStudent();
+  const deleteFaculty = useDeleteFaculty();
+  const updateFaculty = useUpdateFaculty();
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -137,13 +190,15 @@ const AdminUsers = () => {
   // Auto-populate IDs when modal opens
   useEffect(() => {
     if (isCreateModalOpen) {
+      setSectionFilterCourseId("");
+      setSectionFilterYearLevel("");
       if (newUserForm.role === "student" && nextStudentId) {
         setNewUserForm(prev => ({ ...prev, student_id: nextStudentId }));
       } else if (newUserForm.role === "faculty" && nextFacultyId) {
         setNewUserForm(prev => ({ ...prev, employee_id: nextFacultyId }));
       }
     }
-  }, [isCreateModalOpen, nextStudentId, nextFacultyId, newUserForm.role]);
+  }, [isCreateModalOpen, nextStudentId, nextFacultyId]);
 
   // Refetch IDs when role changes
   useEffect(() => {
@@ -170,10 +225,18 @@ const AdminUsers = () => {
           course_id: parseInt(newUserForm.course_id),
           section_id: newUserForm.section_id ? parseInt(newUserForm.section_id) : null,
           year_level: parseInt(newUserForm.year_level),
+          semester: newUserForm.semester,
           contact_number: newUserForm.contact_number || null,
           address: newUserForm.address || null,
           emergency_contact_name: newUserForm.emergency_contact_name || null,
           emergency_contact_number: newUserForm.emergency_contact_number || null,
+          mother_name: newUserForm.mother_name || null,
+          father_name: newUserForm.father_name || null,
+          guardian_name: newUserForm.guardian_name || null,
+          gender: newUserForm.gender || null,
+          birthday: newUserForm.birthday || null,
+          birthplace: newUserForm.birthplace || null,
+          religion: newUserForm.religion || null,
         });
         const fullName = `${newUserForm.firstname} ${newUserForm.middlename ? newUserForm.middlename + ' ' : ''}${newUserForm.lastname}${newUserForm.suffix ? ' ' + newUserForm.suffix : ''}`;
         toast({ title: "Student created successfully", description: `${fullName} has been added.` });
@@ -188,8 +251,17 @@ const AdminUsers = () => {
           employee_id: newUserForm.employee_id,
           department: newUserForm.department,
           position: newUserForm.position,
+          employment_status: newUserForm.employment_status,
           specialization: newUserForm.specialization || null,
+          educational_attainment: newUserForm.educational_attainment || null,
           contact_number: newUserForm.contact_number || null,
+          address: newUserForm.address || null,
+          mother_name: newUserForm.mother_name || null,
+          father_name: newUserForm.father_name || null,
+          gender: newUserForm.gender || null,
+          birthday: newUserForm.birthday || null,
+          birthplace: newUserForm.birthplace || null,
+          religion: newUserForm.religion || null,
           office_location: newUserForm.office_location || null,
         });
         const fullName = `${newUserForm.firstname} ${newUserForm.middlename ? newUserForm.middlename + ' ' : ''}${newUserForm.lastname}${newUserForm.suffix ? ' ' + newUserForm.suffix : ''}`;
@@ -247,6 +319,28 @@ const AdminUsers = () => {
     }
   };
 
+  const handleDeleteUser = async (user: StudentData | FacultyData) => {
+    if (!confirm(`Are you sure you want to delete ${user.user.name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      if ('student_id' in user) {
+        await deleteStudent.mutateAsync(user.id);
+        toast({ title: "Student deleted successfully" });
+      } else {
+        await deleteFaculty.mutateAsync(user.id);
+        toast({ title: "Faculty deleted successfully" });
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Error deleting user", 
+        description: error.response?.data?.message || error.message || "Something went wrong",
+        variant: "destructive" 
+      });
+    }
+  };
+
   const resetForm = () => {
     setNewUserForm({
       firstname: "",
@@ -260,14 +354,24 @@ const AdminUsers = () => {
       course_id: "",
       section_id: "",
       year_level: "1",
+      semester: "1st",
       contact_number: "",
       address: "",
       emergency_contact_name: "",
       emergency_contact_number: "",
+      mother_name: "",
+      father_name: "",
+      guardian_name: "",
+      gender: "",
+      birthday: "",
+      birthplace: "",
+      religion: "",
       employee_id: "",
       department: "",
       position: "",
+      employment_status: "Full-time",
       specialization: "",
+      educational_attainment: "",
       office_location: "",
     });
     setShowPassword(false);
@@ -325,12 +429,7 @@ const AdminUsers = () => {
     setIsEditModalOpen(true);
   };
 
-  const filteredStudents = students?.filter((s: StudentData) => 
-    s.user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.student_id.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
-
+  const filteredStudents = students || [];
   const filteredFaculty = faculty?.filter((f: FacultyData) => 
     f.user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     f.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -339,13 +438,32 @@ const AdminUsers = () => {
 
   const displayData = activeTab === "student" ? filteredStudents : filteredFaculty;
 
+  const clearFilters = () => {
+    setFilterCourseId("");
+    setFilterYearLevel("");
+    setFilterSemester("");
+    setFilterSkillIds([]);
+    setFilterHasViolations("");
+    setFilterViolationSeverity("");
+    setFilterHasAchievements("");
+    setFilterOrganizationIds([]);
+  };
+
+  const hasActiveFilters = filterCourseId || filterYearLevel || filterSemester || 
+    filterSkillIds.length > 0 || filterHasViolations || filterViolationSeverity || 
+    filterHasAchievements || filterOrganizationIds.length > 0;
+
   // Get available sections for selected course and year level
-  const availableSectionsForCreate = sections?.filter((s: any) => 
-    newUserForm.course_id && 
-    newUserForm.year_level &&
-    s.course_id === parseInt(newUserForm.course_id) &&
-    s.year_level === parseInt(newUserForm.year_level)
-  ) || [];
+  const availableSectionsForCreate = sections?.map((section: any) => {
+    // Calculate remaining slots (this is a simple calculation, ideally would fetch from API)
+    const studentCount = students?.filter((s: StudentData) => s.section_id === section.id).length || 0;
+    const remainingSlots = section.capacity - studentCount;
+    return {
+      ...section,
+      studentCount,
+      remainingSlots
+    };
+  }) || [];
 
   // Get available sections for edit form
   const availableSectionsForEdit = sections?.filter((s: any) => 
@@ -353,7 +471,16 @@ const AdminUsers = () => {
     editForm.year_level &&
     s.course_id === parseInt(editForm.course_id) &&
     s.year_level === parseInt(editForm.year_level)
-  ) || [];
+  ).map((section: any) => {
+    // Calculate remaining slots
+    const studentCount = students?.filter((s: StudentData) => s.section_id === section.id).length || 0;
+    const remainingSlots = section.capacity - studentCount;
+    return {
+      ...section,
+      studentCount,
+      remainingSlots
+    };
+  }) || [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -371,6 +498,9 @@ const AdminUsers = () => {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
+              <DialogDescription>
+                Create a new student or faculty account.
+              </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[70vh]">
               <div className="space-y-6 p-1">
@@ -513,9 +643,12 @@ const AdminUsers = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="course">Course</Label>
-                      <Select 
-                        value={newUserForm.course_id} 
-                        onValueChange={(value) => setNewUserForm({ ...newUserForm, course_id: value, section_id: "" })}
+                      <Select
+                        value={newUserForm.course_id}
+                        onValueChange={(value) => {
+                          setSectionFilterCourseId(value);
+                          setNewUserForm({ ...newUserForm, course_id: value, section_id: "" });
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select course" />
@@ -528,45 +661,63 @@ const AdminUsers = () => {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="year_level">Year Level</Label>
-                      <Select 
-                        value={newUserForm.year_level} 
-                        onValueChange={(value) => setNewUserForm({ ...newUserForm, year_level: value, section_id: "" })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5].map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}{year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="year_level">Year Level</Label>
+                        <Select
+                          value={newUserForm.year_level}
+                          onValueChange={(value) => {
+                            setSectionFilterYearLevel(value);
+                            setNewUserForm({ ...newUserForm, year_level: value, section_id: "" });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5].map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}{year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="semester">Semester</Label>
+                        <Select 
+                          value={newUserForm.semester} 
+                          onValueChange={(value) => setNewUserForm({ ...newUserForm, semester: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select semester" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1st">1st Semester</SelectItem>
+                            <SelectItem value="2nd">2nd Semester</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="section">Section</Label>
-                      <Select 
-                        value={newUserForm.section_id} 
+                      <Select
+                        value={newUserForm.section_id}
                         onValueChange={(value) => setNewUserForm({ ...newUserForm, section_id: value })}
-                        disabled={!newUserForm.course_id || !newUserForm.year_level || availableSectionsForCreate.length === 0}
+                        disabled={!newUserForm.course_id || !newUserForm.year_level}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={
-                            !newUserForm.course_id || !newUserForm.year_level 
-                              ? "Select course and year first" 
-                              : availableSectionsForCreate.length === 0 
-                                ? "No sections available" 
-                                : "Select section"
+                            !newUserForm.course_id || !newUserForm.year_level
+                              ? "Select course and year first"
+                              : "Select section"
                           } />
                         </SelectTrigger>
                         <SelectContent>
                           {availableSectionsForCreate.map((section: any) => (
                             <SelectItem key={section.id} value={section.id.toString()}>
-                              {section.name} (Capacity: {section.capacity})
+                              {section.name} - Capacity: {section.capacity} | Available: {section.remainingSlots}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -628,6 +779,106 @@ const AdminUsers = () => {
                         />
                       </div>
                     </div>
+
+                    <Separator />
+
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <User className="h-4 w-4" /> Family Information
+                    </h4>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="mother_name">Mother's Name</Label>
+                        <Input
+                          id="mother_name"
+                          name="mother_name"
+                          autoComplete="name"
+                          value={newUserForm.mother_name}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, mother_name: e.target.value })}
+                          placeholder="Mother's full name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="father_name">Father's Name</Label>
+                        <Input
+                          id="father_name"
+                          name="father_name"
+                          autoComplete="name"
+                          value={newUserForm.father_name}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, father_name: e.target.value })}
+                          placeholder="Father's full name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="guardian_name">Guardian's Name</Label>
+                        <Input
+                          id="guardian_name"
+                          name="guardian_name"
+                          autoComplete="name"
+                          value={newUserForm.guardian_name}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, guardian_name: e.target.value })}
+                          placeholder="Guardian's full name"
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <User className="h-4 w-4" /> Personal Information
+                    </h4>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select 
+                          value={newUserForm.gender} 
+                          onValueChange={(value) => setNewUserForm({ ...newUserForm, gender: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="birthday">Birthday</Label>
+                        <Input
+                          id="birthday"
+                          name="birthday"
+                          type="date"
+                          value={newUserForm.birthday}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, birthday: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="birthplace">Birthplace</Label>
+                        <Input
+                          id="birthplace"
+                          name="birthplace"
+                          value={newUserForm.birthplace}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, birthplace: e.target.value })}
+                          placeholder="City, Province"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="religion">Religion</Label>
+                        <Input
+                          id="religion"
+                          name="religion"
+                          value={newUserForm.religion}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, religion: e.target.value })}
+                          placeholder="Religion"
+                        />
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -678,14 +929,52 @@ const AdminUsers = () => {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="employment_status">Employment Status</Label>
+                        <Select 
+                          value={newUserForm.employment_status} 
+                          onValueChange={(value) => setNewUserForm({ ...newUserForm, employment_status: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select employment status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Full-time">Full-time</SelectItem>
+                            <SelectItem value="Part-time">Part-time</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="educational_attainment">Educational Attainment</Label>
+                        <Select 
+                          value={newUserForm.educational_attainment} 
+                          onValueChange={(value) => setNewUserForm({ ...newUserForm, educational_attainment: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select educational attainment" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BSIT">BSIT</SelectItem>
+                            <SelectItem value="MSIT">MSIT</SelectItem>
+                            <SelectItem value="PhD in CS">PhD in CS</SelectItem>
+                            <SelectItem value="PhD in IT">PhD in IT</SelectItem>
+                            <SelectItem value="Master's Degree">Master's Degree</SelectItem>
+                            <SelectItem value="Doctorate">Doctorate</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="specialization">Specialization</Label>
+                      <Label htmlFor="specialization">Specialization/Expertise</Label>
                       <Input
                         id="specialization"
                         name="specialization"
                         value={newUserForm.specialization}
                         onChange={(e) => setNewUserForm({ ...newUserForm, specialization: e.target.value })}
-                        placeholder="e.g. Web Development"
+                        placeholder="e.g. Web Development, Data Science, AI"
                       />
                     </div>
 
@@ -710,6 +999,107 @@ const AdminUsers = () => {
                           value={newUserForm.office_location}
                           onChange={(e) => setNewUserForm({ ...newUserForm, office_location: e.target.value })}
                           placeholder="Building Room 101"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="faculty_address">Address</Label>
+                      <Input
+                        id="faculty_address"
+                        name="address"
+                        autoComplete="street-address"
+                        value={newUserForm.address}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, address: e.target.value })}
+                        placeholder="Complete address"
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <User className="h-4 w-4" /> Family Information
+                    </h4>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="faculty_mother_name">Mother's Name</Label>
+                        <Input
+                          id="faculty_mother_name"
+                          name="mother_name"
+                          autoComplete="name"
+                          value={newUserForm.mother_name}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, mother_name: e.target.value })}
+                          placeholder="Mother's full name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="faculty_father_name">Father's Name</Label>
+                        <Input
+                          id="faculty_father_name"
+                          name="father_name"
+                          autoComplete="name"
+                          value={newUserForm.father_name}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, father_name: e.target.value })}
+                          placeholder="Father's full name"
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <User className="h-4 w-4" /> Personal Information
+                    </h4>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="faculty_gender">Gender</Label>
+                        <Select 
+                          value={newUserForm.gender} 
+                          onValueChange={(value) => setNewUserForm({ ...newUserForm, gender: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="faculty_birthday">Birthday</Label>
+                        <Input
+                          id="faculty_birthday"
+                          name="birthday"
+                          type="date"
+                          value={newUserForm.birthday}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, birthday: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="faculty_birthplace">Birthplace</Label>
+                        <Input
+                          id="faculty_birthplace"
+                          name="birthplace"
+                          value={newUserForm.birthplace}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, birthplace: e.target.value })}
+                          placeholder="City, Province"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="faculty_religion">Religion</Label>
+                        <Input
+                          id="faculty_religion"
+                          name="religion"
+                          value={newUserForm.religion}
+                          onChange={(e) => setNewUserForm({ ...newUserForm, religion: e.target.value })}
+                          placeholder="Religion"
                         />
                       </div>
                     </div>
@@ -742,11 +1132,141 @@ const AdminUsers = () => {
 
       <Card className="transition-shadow duration-300 hover:shadow-lg">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder={`Search ${activeTab}...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder={`Search ${activeTab}...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+              </div>
+              {activeTab === "student" && (
+                <Button
+                  variant={showAdvancedFilters ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {hasActiveFilters && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">Active</Badge>}
+                </Button>
+              )}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
             </div>
+
+            {activeTab === "student" && showAdvancedFilters && (
+              <div className="border rounded-lg p-4 space-y-4 bg-muted/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Course</Label>
+                    <Select value={filterCourseId || "all"} onValueChange={(value) => setFilterCourseId(value === "all" ? "" : value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All courses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All courses</SelectItem>
+                        {courses?.map((course: any) => (
+                          <SelectItem key={course.id} value={course.id.toString()}>{course.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Year Level</Label>
+                    <Select value={filterYearLevel || "all"} onValueChange={(value) => setFilterYearLevel(value === "all" ? "" : value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All years" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All years</SelectItem>
+                        {[1, 2, 3, 4].map((year) => (
+                          <SelectItem key={year} value={year.toString()}>{year}{year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Semester</Label>
+                    <Select value={filterSemester || "all"} onValueChange={(value) => setFilterSemester(value === "all" ? "" : value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All semesters" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All semesters</SelectItem>
+                        <SelectItem value="1st">1st Semester</SelectItem>
+                        <SelectItem value="2nd">2nd Semester</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Violations</Label>
+                    <Select value={filterHasViolations || "all"} onValueChange={(value) => setFilterHasViolations(value === "all" ? "" : value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All students" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All students</SelectItem>
+                        <SelectItem value="true">With violations</SelectItem>
+                        <SelectItem value="false">No violations</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Skills (multi-select)</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                      {skills?.map((skill: any) => (
+                        <div key={skill.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`skill-${skill.id}`}
+                            checked={filterSkillIds.includes(skill.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFilterSkillIds([...filterSkillIds, skill.id]);
+                              } else {
+                                setFilterSkillIds(filterSkillIds.filter(id => id !== skill.id));
+                              }
+                            }}
+                          />
+                          <label htmlFor={`skill-${skill.id}`} className="text-sm cursor-pointer">
+                            {skill.name} <span className="text-muted-foreground">({skill.category})</span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Organizations (multi-select)</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                      {organizations?.map((org: any) => (
+                        <div key={org.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`org-${org.id}`}
+                            checked={filterOrganizationIds.includes(org.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFilterOrganizationIds([...filterOrganizationIds, org.id]);
+                              } else {
+                                setFilterOrganizationIds(filterOrganizationIds.filter(id => id !== org.id));
+                              }
+                            }}
+                          />
+                          <label htmlFor={`org-${org.id}`} className="text-sm cursor-pointer">
+                            {org.name} <span className="text-muted-foreground">({org.category})</span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -761,6 +1281,7 @@ const AdminUsers = () => {
                   <TableHead>{activeTab === "student" ? "Student ID" : "Employee ID"}</TableHead>
                   <TableHead>{activeTab === "student" ? "Course" : "Department"}</TableHead>
                   <TableHead>{activeTab === "student" ? "Section" : "Position"}</TableHead>
+                  <TableHead>Date Created</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-24">Actions</TableHead>
                 </TableRow>
@@ -768,7 +1289,7 @@ const AdminUsers = () => {
               <TableBody>
                 {displayData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No {activeTab} found</TableCell>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No {activeTab} found</TableCell>
                   </TableRow>
                 ) : (
                   displayData.map((user: StudentData | FacultyData) => {
@@ -780,6 +1301,9 @@ const AdminUsers = () => {
                         <TableCell>{isStudent ? (user as StudentData).student_id : (user as FacultyData).employee_id}</TableCell>
                         <TableCell>{isStudent ? ((user as StudentData).course?.name || "-") : (user as FacultyData).department}</TableCell>
                         <TableCell>{isStudent ? (user as StudentData).section?.name || "-" : (user as FacultyData).position}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(user.user.created_at).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={user.user.is_active ? "default" : "secondary"} className="capitalize">
                             {user.user.is_active ? "Active" : "Inactive"}
@@ -803,6 +1327,15 @@ const AdminUsers = () => {
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={deleteStudent.isPending || deleteFaculty.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -821,6 +1354,9 @@ const AdminUsers = () => {
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5" /> Faculty Details
             </DialogTitle>
+            <DialogDescription>
+              View detailed information about this faculty member.
+            </DialogDescription>
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-6">
@@ -880,6 +1416,9 @@ const AdminUsers = () => {
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit {selectedUser && ('student_id' in selectedUser ? 'Student' : 'Faculty')}</DialogTitle>
+            <DialogDescription>
+              Update the user's information.
+            </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-4 p-1">
@@ -942,7 +1481,7 @@ const AdminUsers = () => {
                       <SelectContent>
                         {availableSectionsForEdit.map((section: any) => (
                           <SelectItem key={section.id} value={section.id.toString()}>
-                            {section.name} (Capacity: {section.capacity})
+                            {section.name} - Capacity: {section.capacity} | Available: {section.remainingSlots}
                           </SelectItem>
                         ))}
                       </SelectContent>

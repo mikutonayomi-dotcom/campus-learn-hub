@@ -105,27 +105,33 @@ class OrganizationController extends Controller
 
     public function myOrganizations(Request $request)
     {
-        if ($request->user()->isStudent()) {
-            $student = $request->user()->student;
-            if (!$student) {
-                return response()->json([]);
+        try {
+            if ($request->user()->isStudent()) {
+                $student = $request->user()->student;
+                if (!$student) {
+                    return response()->json([]);
+                }
+                // Use the organizationMembers relationship for more reliable querying
+                $organizations = Organization::with(['adviser.user', 'members.user'])
+                    ->whereHas('organizationMembers', function ($q) use ($student) {
+                        $q->where('student_id', $student->id)
+                          ->whereNull('left_at');
+                    })
+                    ->get();
+            } else {
+                $faculty = $request->user()->faculty;
+                if (!$faculty) {
+                    return response()->json([]);
+                }
+                $organizations = Organization::with(['adviser.user', 'members.user'])
+                    ->where('adviser_id', $faculty->id)
+                    ->get();
             }
-            $organizations = Organization::with(['adviser.user', 'members'])
-                ->whereHas('members', function ($q) use ($student) {
-                    $q->where('student_id', $student->id)
-                      ->whereNull('left_at');
-                })
-                ->get();
-        } else {
-            $faculty = $request->user()->faculty;
-            if (!$faculty) {
-                return response()->json([]);
-            }
-            $organizations = Organization::with(['adviser.user', 'members.user'])
-                ->where('adviser_id', $faculty->id)
-                ->get();
-        }
 
-        return response()->json($organizations);
+            return response()->json($organizations);
+        } catch (\Exception $e) {
+            \Log::error('myOrganizations error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch organizations'], 500);
+        }
     }
 }

@@ -24,10 +24,31 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Seed BSIT course subjects
+        // Seed initial data (courses, rooms)
+        $this->call(InitialDataSeeder::class);
+
+        // Seed BSIT course subjects with CCS curriculum
         $this->call(CourseSubjectsSeeder::class);
 
         // Seed sections for all year levels
         $this->call(SectionsSeeder::class);
+
+        // Seed faculty (20 users with specializations)
+        $this->call(FacultySeeder::class);
+
+        // Seed students (980 users distributed across sections)
+        $this->call(StudentSeeder::class);
+
+        // Seed schedules with realistic time distribution and conflict validation
+        $this->call(ScheduleSeeder::class);
+
+        // Seed skills for student profiling
+        $this->call(SkillsSeeder::class);
+
+        // Seed organizations
+        $this->call(OrganizationsSeeder::class);
+
+        // Seed sample profile data (skills, achievements, events, memberships)
+        $this->call(SampleProfileDataSeeder::class);
     }
 }

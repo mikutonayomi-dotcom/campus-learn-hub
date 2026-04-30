@@ -21,7 +21,9 @@ class SubjectController extends Controller
         }
 
         if ($request->has('semester')) {
-            $query->where('semester', $request->semester);
+            $query->whereHas('courseSubjects', function ($q) use ($request) {
+                $q->where('semester', $request->semester)->where('is_active', true);
+            });
         }
 
         return response()->json($query->get());

@@ -13,7 +13,9 @@ class Violation extends Model
     protected $fillable = [
         'student_id',
         'reported_by',
+        'reporter_type',
         'type',
+        'violation_type_id',
         'severity',
         'description',
         'violation_date',
@@ -34,13 +36,21 @@ class Violation extends Model
         return $this->belongsTo(Student::class);
     }
 
-    public function reporter(): BelongsTo
+    public function reporter()
     {
-        return $this->belongsTo(Faculty::class, 'reported_by');
+        if ($this->reporter_type === 'faculty') {
+            return $this->belongsTo(Faculty::class, 'reported_by');
+        }
+        return $this->belongsTo(Student::class, 'reported_by');
     }
 
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function violationType(): BelongsTo
+    {
+        return $this->belongsTo(ViolationType::class);
     }
 }

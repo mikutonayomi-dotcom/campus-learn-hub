@@ -188,8 +188,7 @@ class AttendanceController extends Controller
             $q->where('schedule_id', $request->schedule_id)
               ->where('date', $request->date);
         }])
-            ->where('section', $schedule->section->name)
-            ->where('course_id', $schedule->section->course_id)
+            ->where('section_id', $schedule->section->id)
             ->get();
 
         return response()->json([

@@ -26,9 +26,7 @@ class InitialDataSeeder extends Seeder
 
         // Create courses
         $courses = [
-            ['code' => 'BSIT', 'name' => 'Bachelor of Science in Information Technology', 'description' => '4-year IT program', 'duration_years' => 4],
-            ['code' => 'BSCS', 'name' => 'Bachelor of Science in Computer Science', 'description' => '4-year CS program', 'duration_years' => 4],
-            ['code' => 'BSIS', 'name' => 'Bachelor of Science in Information Systems', 'description' => '4-year IS program', 'duration_years' => 4],
+            ['code' => 'BSIT', 'name' => 'Bachelor of Science in Information Technology', 'description' => '4-year IT program', 'duration_years' => 4]
         ];
 
         foreach ($courses as $course) {
@@ -48,20 +46,6 @@ class InitialDataSeeder extends Seeder
             Room::firstOrCreate(['code' => $room['code']], $room);
         }
 
-        // Create skills
-        $skills = [
-            ['name' => 'Programming', 'category' => 'technical', 'description' => 'General programming skills'],
-            ['name' => 'Web Development', 'category' => 'technical', 'description' => 'Frontend and backend web dev'],
-            ['name' => 'Database Management', 'category' => 'technical', 'description' => 'SQL and NoSQL databases'],
-            ['name' => 'Basketball', 'category' => 'sports', 'description' => 'Basketball skills'],
-            ['name' => 'Volleyball', 'category' => 'sports', 'description' => 'Volleyball skills'],
-            ['name' => 'Leadership', 'category' => 'leadership', 'description' => 'Leadership and management'],
-            ['name' => 'Public Speaking', 'category' => 'communication', 'description' => 'Oral communication skills'],
-            ['name' => 'Graphic Design', 'category' => 'arts', 'description' => 'Visual design skills'],
-        ];
-
-        foreach ($skills as $skill) {
-            Skill::firstOrCreate(['name' => $skill['name']], $skill);
-        }
+        
     }
 }

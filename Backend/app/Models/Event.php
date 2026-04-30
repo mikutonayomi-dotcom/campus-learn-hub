@@ -19,6 +19,7 @@ class Event extends Model
         'end_date',
         'venue',
         'organized_by',
+        'organizer_type',
         'status',
         'admin_remarks',
         'approved_by',
@@ -31,9 +32,12 @@ class Event extends Model
         'approved_at' => 'datetime',
     ];
 
-    public function organizer(): BelongsTo
+    public function organizer()
     {
-        return $this->belongsTo(Faculty::class, 'organized_by');
+        if ($this->organizer_type === 'faculty') {
+            return $this->belongsTo(Faculty::class, 'organized_by');
+        }
+        return $this->belongsTo(User::class, 'organized_by');
     }
 
     public function approver(): BelongsTo

@@ -22,8 +22,8 @@ class SearchController extends Controller
         }
 
         // Filter by section
-        if ($request->has('section')) {
-            $query->where('section', $request->section);
+        if ($request->has('section_id')) {
+            $query->where('section_id', $request->section_id);
         }
 
         // Filter by year level
@@ -121,7 +121,7 @@ class SearchController extends Controller
             'skills' => \App\Models\Skill::all(['id', 'name', 'category']),
             'organizations' => \App\Models\Organization::where('is_active', true)->get(['id', 'name']),
             'year_levels' => [1, 2, 3, 4, 5],
-            'sections' => Student::distinct()->pluck('section'),
+            'sections' => \App\Models\Section::all(['id', 'name']),
         ]);
     }
 }

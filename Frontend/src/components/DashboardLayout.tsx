@@ -1,14 +1,22 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
-  Users, BookOpen, ClipboardList, Calendar, Award, Bell, BarChart3,
-  Settings, LogOut, Menu, X, Shield, Building, Search, FileText,
-  GraduationCap, AlertTriangle, FolderOpen, CalendarDays, UsersRound
+  Users, BookOpen, Calendar, Award, Bell, BarChart3,
+  LogOut, Menu, X, Shield, Building, LayoutDashboard, Clock, User,
+  GraduationCap, AlertTriangle, CalendarDays, UsersRound
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useNotifications, useUnreadNotificationCount, useMarkNotificationAsRead, useMarkAllNotificationsAsRead } from "@/hooks/useApi";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ucLogo from "@/assets/uc-logo.png";
 import ccsLogo from "@/assets/ccs-logo.png";
 
@@ -21,36 +29,34 @@ interface NavItem {
 const adminNav: NavItem[] = [
   { label: "Dashboard", icon: BarChart3, path: "/admin" },
   { label: "User Management", icon: Users, path: "/admin/users" },
-  { label: "Activity Logs", icon: FileText, path: "/admin/logs" },
-  { label: "Approvals", icon: ClipboardList, path: "/admin/approvals" },
-  { label: "Courses", icon: GraduationCap, path: "/admin/courses" },
+  { label: "Courses", icon: BookOpen, path: "/admin/courses" },
+  { label: "Course/Subject", icon: BookOpen, path: "/admin/course-subjects" },
   { label: "Sections", icon: UsersRound, path: "/admin/sections" },
-  { label: "Schedules", icon: Calendar, path: "/admin/schedules" },
-  { label: "Facilities", icon: Building, path: "/admin/facilities" },
+  { label: "Facilities (Rooms)", icon: Building, path: "/admin/rooms" },
+  { label: "Scheduling", icon: Calendar, path: "/admin/scheduling" },
+  { label: "Violations", icon: AlertTriangle, path: "/admin/violations" },
+  { label: "Organizations", icon: UsersRound, path: "/admin/organizations" },
   { label: "Events", icon: CalendarDays, path: "/admin/events" },
-  { label: "Advanced Search", icon: Search, path: "/admin/search" },
   { label: "Reports", icon: BarChart3, path: "/admin/reports" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
 ];
 
 const facultyNav: NavItem[] = [
-  { label: "Dashboard", icon: BarChart3, path: "/faculty" },
-  { label: "My Students", icon: Users, path: "/faculty/students" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/faculty" },
+  { label: "My Courses", icon: BookOpen, path: "/faculty/courses" },
+  { label: "Students", icon: Users, path: "/faculty/students" },
   { label: "Violations", icon: AlertTriangle, path: "/faculty/violations" },
   { label: "Achievements", icon: Award, path: "/faculty/achievements" },
-  { label: "Courses & Materials", icon: BookOpen, path: "/faculty/courses" },
-  { label: "Submissions", icon: FolderOpen, path: "/faculty/submissions" },
-  { label: "Schedule", icon: Calendar, path: "/faculty/schedule" },
-  { label: "Events", icon: CalendarDays, path: "/faculty/events" },
+  { label: "Events", icon: Calendar, path: "/faculty/events" },
   { label: "Reports", icon: BarChart3, path: "/faculty/reports" },
+  { label: "Schedule", icon: Clock, path: "/faculty/schedule" },
+  { label: "Profile", icon: User, path: "/faculty/profile" },
 ];
 
 const studentNav: NavItem[] = [
   { label: "Dashboard", icon: BarChart3, path: "/student" },
   { label: "My Profile", icon: GraduationCap, path: "/student/profile" },
   { label: "Academics", icon: BookOpen, path: "/student/academics" },
-  { label: "Materials", icon: FolderOpen, path: "/student/materials" },
-  { label: "Submissions", icon: ClipboardList, path: "/student/submissions" },
+  { label: "Schedule", icon: Calendar, path: "/student/schedule" },
   { label: "Violations", icon: AlertTriangle, path: "/student/violations" },
   { label: "Achievements", icon: Award, path: "/student/achievements" },
   { label: "Events", icon: CalendarDays, path: "/student/events" },
@@ -95,10 +101,26 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navItems = getNavItems(role);
   const RoleIcon = getRoleIcon(role);
+  
+  // Notification hooks
+  const { data: notifications } = useNotifications();
+  const { data: unreadCountData } = useUnreadNotificationCount();
+  const markAsRead = useMarkNotificationAsRead();
+  const markAllAsRead = useMarkAllNotificationsAsRead();
+  
+  const unreadCount = unreadCountData?.count || 0;
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleMarkAsRead = async (notificationId: number) => {
+    await markAsRead.mutateAsync(notificationId);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead.mutateAsync();
   };
 
   return (
@@ -186,14 +208,70 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
 
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="ghost" size="icon" className="relative group">
-              <Bell className="h-5 w-5 transition-transform duration-200 group-hover:rotate-12" />
-              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                3
-              </span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative group">
+                  <Bell className="h-5 w-5 transition-transform duration-200 group-hover:rotate-12" />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center p-0 animate-pulse">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
+                        Mark all as read
+                      </Button>
+                    )}
+                  </div>
+                  <ScrollArea className="h-64">
+                    {notifications && notifications.length > 0 ? (
+                      notifications.map((notification: any) => (
+                        <div
+                          key={notification.id}
+                          className={cn(
+                            "p-3 rounded-lg mb-2 cursor-pointer transition-colors hover:bg-accent",
+                            !notification.is_read && "bg-accent/50"
+                          )}
+                          onClick={() => handleMarkAsRead(notification.id)}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={cn(
+                              "mt-0.5 h-2 w-2 rounded-full",
+                              notification.is_read ? "bg-muted" : "bg-primary"
+                            )} />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{notification.title}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {new Date(notification.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">No notifications</p>
+                    )}
+                  </ScrollArea>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold transition-transform duration-200 hover:scale-110 cursor-pointer">
-              {user?.name?.[0]?.toUpperCase() || "U"}
+              {user?.profile_image ? (
+                <img 
+                  src={`http://localhost:8000/storage/${user.profile_image}`} 
+                  alt="Profile" 
+                  className="h-full w-full object-cover rounded-full"
+                />
+              ) : (
+                user?.name?.[0]?.toUpperCase() || "U"
+              )}
             </div>
           </div>
         </header>

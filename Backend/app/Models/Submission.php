@@ -12,9 +12,13 @@ class Submission extends Model
 
     protected $fillable = [
         'student_id',
+        'assignment_id',
         'material_id',
+        'title',
         'content',
+        'description',
         'file_path',
+        'original_filename',
         'external_link',
         'status',
         'grade',
@@ -38,6 +42,11 @@ class Submission extends Model
     public function material(): BelongsTo
     {
         return $this->belongsTo(Material::class);
+    }
+
+    public function assignment(): BelongsTo
+    {
+        return $this->belongsTo(Assignment::class);
     }
 
     public function grader(): BelongsTo

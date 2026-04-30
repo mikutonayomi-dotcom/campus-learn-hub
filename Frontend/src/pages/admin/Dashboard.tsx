@@ -57,9 +57,40 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Admin Dashboard</h1>
+        <h1 className="text-2xl font-display font-bold text-foreground">Welcome, System Admin of CCS Profiling System</h1>
         <p className="text-muted-foreground text-sm mt-1">Overview of the CCS Profiling System</p>
       </div>
+
+      {/* Shortcut Keys */}
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <Shield className="h-4 w-4 text-primary" />
+            Quick Access Shortcuts
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: "User Management", icon: Users, key: "U" },
+              { label: "Courses", icon: BookOpen, key: "C" },
+              { label: "Violations", icon: AlertTriangle, key: "V" },
+              { label: "Achievements", icon: Award, key: "A" },
+              { label: "Events", icon: CalendarDays, key: "E" },
+              { label: "Approvals", icon: FileText, key: "P" },
+            ].map((shortcut) => (
+              <div
+                key={shortcut.label}
+                className="flex items-center gap-2 p-2 rounded-lg bg-background/50 hover:bg-background transition-colors cursor-pointer"
+              >
+                <shortcut.icon className="h-4 w-4 text-primary" />
+                <span className="text-xs text-foreground">{shortcut.label}</span>
+                <kbd className="ml-auto text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                  {shortcut.key}
+                </kbd>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {statItems.map((stat) => (

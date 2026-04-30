@@ -19,7 +19,7 @@ class RoomController extends Controller
         $validated = $request->validate([
             'code' => 'required|string|unique:rooms',
             'name' => 'required|string',
-            'type' => 'required|in:classroom,laboratory,auditorium,office',
+            'type' => 'required|in:classroom,laboratory,auditorium,gym,office',
             'capacity' => 'required|integer|min:1',
             'location' => 'nullable|string',
         ]);
@@ -37,7 +37,7 @@ class RoomController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string',
-            'type' => 'sometimes|in:classroom,laboratory,auditorium,office',
+            'type' => 'sometimes|in:classroom,laboratory,auditorium,gym,office',
             'capacity' => 'sometimes|integer|min:1',
             'location' => 'nullable|string',
             'is_active' => 'sometimes|boolean',

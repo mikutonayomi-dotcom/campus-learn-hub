@@ -1,133 +1,186 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, ClipboardList, Award, Calendar, AlertTriangle, Loader2 } from "lucide-react";
-import { useMyStudents, useMySchedule, useSubmissionsToGrade, useFacultyProfile } from "@/hooks/useApi";
-import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { 
+  BookOpen, Users, Bell, 
+  CheckCircle, AlertCircle, Loader2, Clock
+} from "lucide-react";
+import { useMyClasses, useMyStudents, useSubmissionsToGrade, useAnnouncements } from "@/hooks/useApi";
+import { useNavigate } from "react-router-dom";
 
 const FacultyDashboard = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { data: classes, isLoading: classesLoading } = useMyClasses();
   const { data: students, isLoading: studentsLoading } = useMyStudents();
-  const { data: schedule, isLoading: scheduleLoading } = useMySchedule();
-  const { data: submissions, isLoading: submissionsLoading } = useSubmissionsToGrade();
-  const { data: profile, isLoading: profileLoading } = useFacultyProfile();
+  const { data: submissionsToGrade, isLoading: submissionsLoading } = useSubmissionsToGrade();
+  const { data: announcements, isLoading: announcementsLoading } = useAnnouncements();
 
-  const isLoading = studentsLoading || scheduleLoading || submissionsLoading || profileLoading;
-
-  // Get unique courses from schedule
-  const uniqueCourses = schedule ? [...new Set(schedule.map((s: any) => s.subject?.code).filter(Boolean))] : [];
-  
-  // Get reported violations
-  const reportedViolations = profile?.violations?.filter((v: any) => v.reported_by === profile.id) || [];
-  const pendingViolations = reportedViolations.filter((v: any) => v.status === 'pending').length;
-
-  const stats = [
-    { label: "Assigned Students", value: students?.length?.toString() || "0", icon: Users, change: "From your sections" },
-    { label: "Active Courses", value: uniqueCourses.length.toString(), icon: BookOpen, change: uniqueCourses.join(", ") || "No courses" },
-    { label: "Pending Submissions", value: submissions?.length?.toString() || "0", icon: ClipboardList, change: "To grade" },
-    { label: "Reported Violations", value: reportedViolations.length.toString(), icon: AlertTriangle, change: `${pendingViolations} pending approval` },
-  ];
-
-  // Get today's day name
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  const todaysSchedule = schedule?.filter((s: any) => s.day === today) || [];
-
-  // Get recent submissions
-  const recentSubmissions = submissions?.slice(0, 5) || [];
+  const isLoading = classesLoading || studentsLoading || submissionsLoading || announcementsLoading;
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  const totalClasses = classes?.length || 0;
+  const totalStudents = students?.length || 0;
+  const pendingGrades = submissionsToGrade?.length || 0;
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Faculty Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.name || "Professor"}</p>
+      {/* Welcome Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">
+            Faculty Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Manage your classes and students
+          </p>
+        </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-3xl font-display font-bold text-foreground mt-1">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
-                </div>
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <stat.icon className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-display flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Today's Schedule
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">My Classes</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {todaysSchedule.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No classes scheduled for today</p>
-            ) : (
-              <div className="space-y-3">
-                {todaysSchedule.map((item: any, i: number) => (
-                  <div key={i} className="flex gap-4 py-3 border-b last:border-0">
-                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
-                      {item.start_time?.substring(0, 5)}
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.subject?.code} - {item.subject?.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.section?.name} &bull; {item.room?.name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="text-2xl font-bold">{totalClasses}</div>
+            <p className="text-xs text-muted-foreground mt-1">Subject-section pairs</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-display flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              Recent Submissions to Grade
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {recentSubmissions.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No pending submissions</p>
-            ) : (
-              <div className="space-y-3">
-                {recentSubmissions.map((item: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.student?.user?.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.material?.title}</p>
-                    </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                      item.status === "late" ? "bg-destructive/10 text-destructive" : 
-                      item.status === "graded" ? "bg-success/10 text-success-foreground" :
-                      "bg-warning/10 text-warning"
-                    }`}>
-                      {item.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="text-2xl font-bold">{totalStudents}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all sections</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Grades</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingGrades}</div>
+            <p className="text-xs text-muted-foreground mt-1">Submissions to review</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Announcements</CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{announcements?.length || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">New updates</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* My Classes */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>My Classes</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => navigate('/faculty/courses')}>
+              View All
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {classes && classes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {classes.slice(0, 6).map((classItem: any) => (
+                <Card key={`${classItem.subject_id}-${classItem.section_id}`} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-semibold text-sm">{classItem.subject?.name}</h3>
+                        <Badge variant="secondary" className="text-xs">{classItem.subject?.code}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Section: {classItem.section?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Students: {classItem.students_count}
+                      </p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        onClick={() => navigate(`/faculty/courses/${classItem.subject_id}/${classItem.section_id}`)}
+                      >
+                        Manage Class
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No classes assigned yet</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Activities */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">New submission received</p>
+                <p className="text-xs text-muted-foreground">Web Development - Project Phase 1</p>
+                <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Assignment deadline approaching</p>
+                <p className="text-xs text-muted-foreground">Database Systems - Lab Exercise 3</p>
+                <p className="text-xs text-muted-foreground mt-1">Due in 1 day</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Material uploaded successfully</p>
+                <p className="text-xs text-muted-foreground">Programming 101 - Lecture Notes</p>
+                <p className="text-xs text-muted-foreground mt-1">Yesterday</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

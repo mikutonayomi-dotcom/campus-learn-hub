@@ -22,6 +22,11 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\CourseSubjectController;
+use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\QuizController;
+use App\Http\Controllers\Api\MedicalRecordController;
+use App\Http\Controllers\Api\AssignmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,7 +53,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Profile routes
     Route::get('/my-profile', [StudentController::class, 'myProfile']);
+    Route::get('/my-subjects', [StudentController::class, 'mySubjects']);
+    Route::post('/profile-image', [StudentController::class, 'updateProfileImage']);
+    Route::put('/profile', [StudentController::class, 'updateProfile']);
     Route::get('/faculty/my-profile', [FacultyController::class, 'myProfile']);
+    Route::get('/faculty/my-classes', [FacultyController::class, 'myClasses']);
+    Route::post('/faculty/profile-image', [FacultyController::class, 'updateProfileImage']);
+    Route::put('/faculty/profile', [FacultyController::class, 'updateProfile']);
 
     // Course routes
     Route::apiResource('courses', CourseController::class);
@@ -69,6 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Subject routes
     Route::apiResource('subjects', SubjectController::class);
 
+    // Course Subject routes
+    Route::apiResource('course-subjects', CourseSubjectController::class);
+
     // Section routes
     Route::apiResource('sections', SectionController::class);
     Route::get('/sections/{section}/students', [SectionController::class, 'students']);
@@ -76,12 +90,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Schedule routes
     Route::apiResource('schedules', ScheduleController::class);
     Route::get('/my-schedule', [ScheduleController::class, 'mySchedule']);
+    Route::post('/schedules/generate', [ScheduleController::class, 'generateSchedule']);
 
     // Violation routes
     Route::apiResource('violations', ViolationController::class);
     Route::post('/violations/{violation}/approve', [ViolationController::class, 'approve']);
     Route::post('/violations/{violation}/reject', [ViolationController::class, 'reject']);
     Route::get('/violations/pending/count', [ViolationController::class, 'pendingCount']);
+    Route::get('/violation-types', [ViolationController::class, 'getViolationTypes']);
 
     // Achievement routes
     Route::apiResource('achievements', AchievementController::class);
@@ -92,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Material routes
     Route::apiResource('materials', MaterialController::class);
     Route::get('/my-materials', [MaterialController::class, 'myMaterials']);
+    Route::get('/materials/{material}/download', [MaterialController::class, 'download']);
 
     // Submission routes
     Route::apiResource('submissions', SubmissionController::class);
@@ -146,6 +163,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/event-participation', [ReportController::class, 'eventParticipation']);
     Route::get('/reports/organizations', [ReportController::class, 'organizationReport']);
     Route::get('/reports/dashboard-stats', [ReportController::class, 'dashboardStats']);
+    
+    // Report export routes
+    Route::get('/reports/export/student-performance', [ReportController::class, 'exportStudentPerformance']);
+    Route::get('/reports/export/attendance', [ReportController::class, 'exportAttendanceReport']);
+    Route::get('/reports/export/violation-summary', [ReportController::class, 'exportViolationSummary']);
+    Route::get('/reports/export/achievement-summary', [ReportController::class, 'exportAchievementSummary']);
+    Route::get('/reports/export/event-participation', [ReportController::class, 'exportEventParticipation']);
+    Route::get('/reports/export/organizations', [ReportController::class, 'exportOrganizationReport']);
 
     // Activity log routes
     Route::apiResource('activity-logs', ActivityLogController::class)->only(['index', 'store']);
@@ -159,6 +184,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
     Route::get('/notifications/unread/count', [NotificationController::class, 'unreadCount']);
     Route::post('/notifications/broadcast', [NotificationController::class, 'broadcast']);
+
+    // Announcement routes
+    Route::apiResource('announcements', AnnouncementController::class);
+
+    // Quiz routes
+    Route::apiResource('quizzes', QuizController::class);
+    Route::post('/quizzes/{quiz}/questions', [QuizController::class, 'addQuestion']);
+    Route::put('/quiz-questions/{question}', [QuizController::class, 'updateQuestion']);
+    Route::delete('/quiz-questions/{question}', [QuizController::class, 'deleteQuestion']);
+    Route::post('/quizzes/{quiz}/start', [QuizController::class, 'startQuiz']);
+    Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submitQuiz']);
+    Route::get('/my-quiz-attempts', [QuizController::class, 'myAttempts']);
+
+    // Medical records routes
+    Route::apiResource('medical-records', MedicalRecordController::class);
+    Route::post('/medical-records/{medicalRecord}/verify', [MedicalRecordController::class, 'verify']);
+
+    // Assignment routes
+    Route::apiResource('assignments', AssignmentController::class);
+    Route::get('/my-assignments', [AssignmentController::class, 'index']);
 });
 
 Route::middleware('auth:sanctum')->get('/test', function (Request $request) {

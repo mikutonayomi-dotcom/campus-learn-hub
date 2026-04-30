@@ -41,9 +41,18 @@ class FacultyController extends Controller
             'employee_id' => 'required|string|unique:faculty',
             'department' => 'required|string',
             'position' => 'required|string',
+            'employment_status' => 'nullable|in:Full-time,Part-time',
             'specialization' => 'nullable|string',
+            'educational_attainment' => 'nullable|string',
             'contact_number' => 'nullable|string',
+            'address' => 'nullable|string',
             'office_location' => 'nullable|string',
+            'mother_name' => 'nullable|string',
+            'father_name' => 'nullable|string',
+            'gender' => 'nullable|in:male,female,other',
+            'birthday' => 'nullable|date',
+            'birthplace' => 'nullable|string',
+            'religion' => 'nullable|string',
         ]);
 
         // Build full name from parts
@@ -57,10 +66,22 @@ class FacultyController extends Controller
         }
 
         $user = User::create([
+            'first_name' => $validated['firstname'],
+            'middle_name' => $validated['middlename'] ?? null,
+            'last_name' => $validated['lastname'],
+            'suffix' => $validated['suffix'] ?? null,
             'name' => $fullName,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'faculty',
+            'contact_number' => $validated['contact_number'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'birthday' => $validated['birthday'] ?? null,
+            'birthplace' => $validated['birthplace'] ?? null,
+            'religion' => $validated['religion'] ?? null,
+            'mother_name' => $validated['mother_name'] ?? null,
+            'father_name' => $validated['father_name'] ?? null,
         ]);
 
         $faculty = Faculty::create([
@@ -68,9 +89,17 @@ class FacultyController extends Controller
             'employee_id' => $validated['employee_id'],
             'department' => $validated['department'],
             'position' => $validated['position'],
+            'employment_status' => $validated['employment_status'] ?? 'Full-time',
             'specialization' => $validated['specialization'] ?? null,
+            'educational_attainment' => $validated['educational_attainment'] ?? null,
             'contact_number' => $validated['contact_number'] ?? null,
             'office_location' => $validated['office_location'] ?? null,
+            'mother_name' => $validated['mother_name'] ?? null,
+            'father_name' => $validated['father_name'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'birthday' => $validated['birthday'] ?? null,
+            'birthplace' => $validated['birthplace'] ?? null,
+            'religion' => $validated['religion'] ?? null,
         ]);
 
         return response()->json($faculty->load('user'), 201);
@@ -97,11 +126,55 @@ class FacultyController extends Controller
 
         $faculty->update($validated);
 
-        if ($request->has('name') || $request->has('email')) {
-            $faculty->user->update($request->only(['name', 'email']));
+        if ($request->has('name') || $request->has('email') || $request->has('profile_image')) {
+            $faculty->user->update($request->only(['name', 'email', 'profile_image']));
         }
 
         return response()->json($faculty->load('user'));
+    }
+
+    public function updateProfileImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'profile_image' => 'required|image|max:2048', // Max 2MB
+            ]);
+
+            $user = $request->user();
+
+            if ($request->hasFile('profile_image')) {
+                $file = $request->file('profile_image');
+                $path = $file->store('profile-images', 'public');
+                $user->update(['profile_image' => $path]);
+            }
+
+            return response()->json(['profile_image' => $user->profile_image]);
+        } catch (\Exception $e) {
+            \Log::error('Faculty updateProfileImage error: ' . $e->getMessage());
+            \Log::error('Faculty updateProfileImage trace: ' . $e->getTraceAsString());
+            return response()->json(['error' => 'Failed to upload profile image'], 500);
+        }
+    }
+
+    public function updateProfile(Request $request)
+    {
+        try {
+            $faculty = $request->user()->faculty;
+            
+            $validated = $request->validate([
+                'contact_number' => 'nullable|string',
+                'address' => 'nullable|string',
+                'office_location' => 'nullable|string',
+                'specialization' => 'nullable|string',
+            ]);
+
+            $faculty->update($validated);
+
+            return response()->json($faculty->load('user'));
+        } catch (\Exception $e) {
+            \Log::error('Faculty updateProfile error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to update profile'], 500);
+        }
     }
 
     public function destroy(Faculty $faculty)
@@ -142,15 +215,42 @@ class FacultyController extends Controller
             return response()->json([]);
         }
 
-        $students = \App\Models\Student::with('user', 'course')
-            ->whereIn('section', function ($query) use ($sectionIds) {
-                $query->select('name')
-                    ->from('sections')
-                    ->whereIn('id', $sectionIds);
-            })
+        $students = \App\Models\Student::with('user', 'course', 'section')
+            ->whereIn('section_id', $sectionIds)
             ->get();
 
         return response()->json($students);
+    }
+
+    public function myClasses(Request $request)
+    {
+        $faculty = $request->user()->faculty;
+        
+        if (!$faculty) {
+            return response()->json([]);
+        }
+
+        $schedules = $faculty->schedules()
+            ->with(['subject', 'section', 'room'])
+            ->get()
+            ->groupBy(function ($schedule) {
+                return $schedule->subject_id . '-' . $schedule->section_id;
+            })
+            ->map(function ($group) {
+                $first = $group->first();
+                return [
+                    'subject_id' => $first->subject_id,
+                    'subject' => $first->subject,
+                    'section_id' => $first->section_id,
+                    'section' => $first->section,
+                    'room' => $first->room,
+                    'schedules' => $group,
+                    'students_count' => $first->section ? $first->section->students()->count() : 0,
+                ];
+            })
+            ->values();
+
+        return response()->json($schedules);
     }
 
     public function getNextEmployeeId()

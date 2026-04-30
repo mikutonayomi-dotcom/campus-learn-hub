@@ -13,9 +13,9 @@ class UpdateSubjectsSemesterSeeder extends Seeder
      */
     public function run(): void
     {
-        // Set default semester for all subjects to 1st
-        DB::table('subjects')->update(['semester' => '1st']);
-        
-        $this->command->info('Updated all subjects semester to 1st');
+        // Set default semester for all subjects to 1
+        DB::table('subjects')->update(['semester' => 1]);
+
+        $this->command->info('Updated all subjects semester to 1');
     }
 }

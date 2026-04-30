@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Section extends Model
@@ -15,6 +16,7 @@ class Section extends Model
         'name',
         'course_id',
         'year_level',
+        'semester',
         'capacity',
         'academic_year',
         'is_active',
@@ -32,5 +34,15 @@ class Section extends Model
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
+    }
+
+    public function students()
+    {
+        return $this->hasMany(Student::class);
+    }
+
+    public function getStudentsCountAttribute()
+    {
+        return $this->students()->count();
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Subject extends Model
 {
@@ -32,6 +33,11 @@ class Subject extends Model
         return $this->belongsTo(Course::class);
     }
 
+    public function courseSubjects(): HasMany
+    {
+        return $this->hasMany(CourseSubject::class);
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
@@ -50,5 +56,20 @@ class Subject extends Model
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
+    }
+
+    public function quizzes(): HasMany
+    {
+        return $this->hasMany(Quiz::class);
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class);
     }
 }

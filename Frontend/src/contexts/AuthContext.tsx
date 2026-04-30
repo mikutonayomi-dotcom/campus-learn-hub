@@ -11,6 +11,7 @@ interface User {
   email_verified_at?: string;
   created_at: string;
   updated_at: string;
+  profile_image?: string;
 }
 
 type AppRole = "admin" | "faculty" | "student";
@@ -149,7 +150,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem("user");
       setUser(null);
       setRole(null);
-      navigate("/login");
+      navigate("/");
     }
   };
 
