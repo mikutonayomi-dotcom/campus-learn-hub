@@ -21,10 +21,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:5173'),
-        env('FRONTEND_URL_PRODUCTION', 'https://your-frontend-domain.com'),
-    ],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

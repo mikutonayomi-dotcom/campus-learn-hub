@@ -27,6 +27,9 @@ class DatabaseSeeder extends Seeder
         // Seed initial data (courses, rooms)
         $this->call(InitialDataSeeder::class);
 
+        // Seed violation types
+        $this->call(ViolationTypeSeeder::class);
+
         // Seed BSIT course subjects with CCS curriculum
         $this->call(CourseSubjectsSeeder::class);
 
@@ -41,14 +44,5 @@ class DatabaseSeeder extends Seeder
 
         // Seed schedules with realistic time distribution and conflict validation
         $this->call(ScheduleSeeder::class);
-
-        // Seed skills for student profiling
-        $this->call(SkillsSeeder::class);
-
-        // Seed organizations
-        $this->call(OrganizationsSeeder::class);
-
-        // Seed sample profile data (skills, achievements, events, memberships)
-        $this->call(SampleProfileDataSeeder::class);
     }
 }
