@@ -8,13 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('student_skills', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('student_id')->constrained('students');
-            $table->foreignId('skill_id')->constrained();
-            $table->string('proficiency')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('student_skills')) {
+            Schema::create('student_skills', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('student_id')->constrained('students');
+                $table->foreignId('skill_id')->constrained();
+                $table->string('proficiency')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

@@ -8,15 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('quizzes', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('subject_id')->constrained();
-            $table->string('title');
-            $table->text('description')->nullable();
-            $table->integer('duration')->nullable();
-            $table->integer('total_points')->default(0);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('quizzes')) {
+            Schema::create('quizzes', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('subject_id')->constrained();
+                $table->string('title');
+                $table->text('description')->nullable();
+                $table->integer('duration')->nullable();
+                $table->integer('total_points')->default(0);
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

@@ -8,13 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('organization_members', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('organization_id')->constrained();
-            $table->foreignId('student_id')->constrained('students');
-            $table->string('role')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('organization_members')) {
+            Schema::create('organization_members', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('organization_id')->constrained();
+                $table->foreignId('student_id')->constrained('students');
+                $table->string('role')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('violation_types', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->enum('severity', ['low', 'medium', 'high']);
-            $table->string('category')->nullable();
-            $table->text('description')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('violation_types')) {
+            Schema::create('violation_types', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->enum('severity', ['low', 'medium', 'high']);
+                $table->string('category')->nullable();
+                $table->text('description')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void
