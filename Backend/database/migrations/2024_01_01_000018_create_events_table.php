@@ -8,16 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('events', function (Blueprint $table) {
-            $table->id();
-            $table->string('title');
-            $table->text('description')->nullable();
-            $table->date('date');
-            $table->time('time')->nullable();
-            $table->string('location')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('events')) {
+            Schema::create('events', function (Blueprint $table) {
+                $table->id();
+                $table->string('title');
+                $table->text('description')->nullable();
+                $table->date('date');
+                $table->time('time')->nullable();
+                $table->string('location')->nullable();
+                $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

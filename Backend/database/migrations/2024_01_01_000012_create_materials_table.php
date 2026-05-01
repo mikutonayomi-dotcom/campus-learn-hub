@@ -8,15 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('materials', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('subject_id')->constrained();
-            $table->string('title');
-            $table->text('description')->nullable();
-            $table->string('file_path');
-            $table->string('original_filename')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('materials')) {
+            Schema::create('materials', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('subject_id')->constrained();
+                $table->string('title');
+                $table->text('description')->nullable();
+                $table->string('file_path');
+                $table->string('original_filename')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

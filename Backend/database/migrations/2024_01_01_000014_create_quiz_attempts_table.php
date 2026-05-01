@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('quiz_attempts', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('quiz_id')->constrained();
-            $table->foreignId('student_id')->constrained('students');
-            $table->text('answers')->nullable();
-            $table->decimal('score', 5, 2)->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('quiz_attempts')) {
+            Schema::create('quiz_attempts', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('quiz_id')->constrained();
+                $table->foreignId('student_id')->constrained('students');
+                $table->text('answers')->nullable();
+                $table->decimal('score', 5, 2)->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

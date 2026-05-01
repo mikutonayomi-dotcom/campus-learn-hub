@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('sections', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->foreignId('course_id')->constrained();
-            $table->integer('year_level');
-            $table->enum('semester', ['1', '2'])->default('1');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('sections')) {
+            Schema::create('sections', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->foreignId('course_id')->constrained();
+                $table->integer('year_level');
+                $table->enum('semester', ['1', '2'])->default('1');
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

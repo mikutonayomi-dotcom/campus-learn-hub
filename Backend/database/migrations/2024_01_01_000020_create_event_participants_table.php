@@ -8,12 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('event_participants', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('event_id')->constrained();
-            $table->foreignId('student_id')->constrained('students');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('event_participants')) {
+            Schema::create('event_participants', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('event_id')->constrained();
+                $table->foreignId('student_id')->constrained('students');
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

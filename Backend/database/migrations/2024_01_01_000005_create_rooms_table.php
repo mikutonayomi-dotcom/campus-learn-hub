@@ -8,13 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('rooms', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();
-            $table->enum('type', ['classroom', 'lab', 'gym', 'auditorium'])->default('classroom');
-            $table->integer('capacity')->default(50);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('rooms')) {
+            Schema::create('rooms', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->unique();
+                $table->enum('type', ['classroom', 'lab', 'gym', 'auditorium'])->default('classroom');
+                $table->integer('capacity')->default(50);
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

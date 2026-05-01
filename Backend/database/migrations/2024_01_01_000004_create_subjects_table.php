@@ -8,17 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('subjects', function (Blueprint $table) {
-            $table->id();
-            $table->string('code')->unique();
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->foreignId('course_id')->nullable()->constrained();
-            $table->integer('year_level')->nullable();
-            $table->enum('semester', ['1', '2'])->nullable();
-            $table->foreignId('faculty_id')->nullable()->constrained('faculty');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('subjects')) {
+            Schema::create('subjects', function (Blueprint $table) {
+                $table->id();
+                $table->string('code')->unique();
+                $table->string('name');
+                $table->text('description')->nullable();
+                $table->foreignId('course_id')->nullable()->constrained();
+                $table->integer('year_level')->nullable();
+                $table->enum('semester', ['1', '2'])->nullable();
+                $table->foreignId('faculty_id')->nullable()->constrained('faculty');
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void
