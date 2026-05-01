@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('events', function (Blueprint $table) {
-            $table->dropForeign('events_organized_by_foreign');
+            try {
+                $table->dropForeign('events_organized_by_foreign');
+            } catch (\Exception $e) {
+                // Foreign key may not exist; continue
+            }
         });
     }
 

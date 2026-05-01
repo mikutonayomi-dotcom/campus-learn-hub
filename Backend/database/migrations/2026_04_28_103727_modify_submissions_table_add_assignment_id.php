@@ -12,10 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('submissions', function (Blueprint $table) {
-            // Add assignment_id column
-            $table->foreignId('assignment_id')->nullable()->after('student_id')->constrained()->onDelete('set null');
-            
-            // If material_id exists, we'll keep it for backward compatibility but mark it as nullable
+            // Add assignment_id column (skip if already exists from base migration)
+            if (!Schema::hasColumn('submissions', 'assignment_id')) {
+                $table->foreignId('assignment_id')->nullable()->after('student_id')->constrained()->onDelete('set null');
+            }
+
+            // If material_id does not exist, add it for backward compatibility
             if (!Schema::hasColumn('submissions', 'material_id')) {
                 $table->foreignId('material_id')->nullable()->after('assignment_id')->constrained()->onDelete('set null');
             }

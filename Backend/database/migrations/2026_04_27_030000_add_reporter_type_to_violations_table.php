@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('violations', function (Blueprint $table) {
-            $table->string('reporter_type')->default('faculty')->after('reported_by');
+            if (!Schema::hasColumn('violations', 'reporter_type')) {
+                $table->string('reporter_type')->default('faculty')->after('reported_by');
+            }
         });
     }
 

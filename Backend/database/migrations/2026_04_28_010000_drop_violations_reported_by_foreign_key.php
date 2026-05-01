@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('violations', function (Blueprint $table) {
-            $table->dropForeign('violations_reported_by_foreign');
+            try {
+                $table->dropForeign('violations_reported_by_foreign');
+            } catch (\Exception $e) {
+                // Foreign key may not exist; continue
+            }
         });
     }
 

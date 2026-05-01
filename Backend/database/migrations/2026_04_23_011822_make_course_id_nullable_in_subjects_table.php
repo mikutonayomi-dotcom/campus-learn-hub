@@ -12,7 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('subjects', function (Blueprint $table) {
-            $table->dropForeign(['course_id']);
+            // Drop the foreign key only if it exists (it may already be nullable from base migration)
+            try {
+                $table->dropForeign(['course_id']);
+            } catch (\Exception $e) {
+                // Foreign key may not exist; continue
+            }
             $table->foreignId('course_id')->nullable()->change();
             $table->integer('year_level')->nullable()->change();
             $table->enum('semester', ['1', '2'])->nullable()->change();

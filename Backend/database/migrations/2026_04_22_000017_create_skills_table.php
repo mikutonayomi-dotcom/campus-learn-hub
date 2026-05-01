@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sections', function (Blueprint $table) {
-            if (!Schema::hasColumn('sections', 'semester')) {
-                $table->enum('semester', ['1st', '2nd'])->default('1st')->after('year_level');
-            }
+        Schema::create('skills', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('category')->nullable();
+            $table->text('description')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -23,8 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sections', function (Blueprint $table) {
-            $table->dropColumn('semester');
-        });
+        Schema::dropIfExists('skills');
     }
 };

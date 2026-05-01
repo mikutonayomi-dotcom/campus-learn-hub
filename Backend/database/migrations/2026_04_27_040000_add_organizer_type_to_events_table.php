@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('events', function (Blueprint $table) {
-            $table->string('organizer_type')->default('faculty')->after('organized_by');
+            if (!Schema::hasColumn('events', 'organizer_type')) {
+                $table->string('organizer_type')->default('faculty')->after('organized_by');
+            }
         });
     }
 

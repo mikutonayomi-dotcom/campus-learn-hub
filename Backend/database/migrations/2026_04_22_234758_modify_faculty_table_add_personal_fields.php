@@ -12,21 +12,37 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('faculty', function (Blueprint $table) {
-            // Add employment status
-            $table->enum('employment_status', ['Full-time', 'Part-time'])->default('Full-time')->after('position');
-            
+            // Add employment status (skip if already exists from base migration)
+            if (!Schema::hasColumn('faculty', 'employment_status')) {
+                $table->enum('employment_status', ['Full-time', 'Part-time'])->default('Full-time')->after('position');
+            }
+
             // Add educational attainment
-            $table->string('educational_attainment')->nullable()->after('specialization');
-            
+            if (!Schema::hasColumn('faculty', 'educational_attainment')) {
+                $table->string('educational_attainment')->nullable()->after('specialization');
+            }
+
             // Add family information fields
-            $table->string('mother_name')->nullable()->after('office_location');
-            $table->string('father_name')->nullable()->after('mother_name');
-            
+            if (!Schema::hasColumn('faculty', 'mother_name')) {
+                $table->string('mother_name')->nullable()->after('office_location');
+            }
+            if (!Schema::hasColumn('faculty', 'father_name')) {
+                $table->string('father_name')->nullable()->after('mother_name');
+            }
+
             // Add personal information fields
-            $table->enum('gender', ['male', 'female', 'other'])->nullable()->after('father_name');
-            $table->date('birthday')->nullable()->after('gender');
-            $table->string('birthplace')->nullable()->after('birthday');
-            $table->string('religion')->nullable()->after('birthplace');
+            if (!Schema::hasColumn('faculty', 'gender')) {
+                $table->enum('gender', ['male', 'female', 'other'])->nullable()->after('father_name');
+            }
+            if (!Schema::hasColumn('faculty', 'birthday')) {
+                $table->date('birthday')->nullable()->after('gender');
+            }
+            if (!Schema::hasColumn('faculty', 'birthplace')) {
+                $table->string('birthplace')->nullable()->after('birthday');
+            }
+            if (!Schema::hasColumn('faculty', 'religion')) {
+                $table->string('religion')->nullable()->after('birthplace');
+            }
         });
     }
 
