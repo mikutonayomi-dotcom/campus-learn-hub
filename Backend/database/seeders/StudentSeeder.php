@@ -28,6 +28,10 @@ class StudentSeeder extends Seeder
             ->orderBy('name')
             ->get();
 
+        // Get existing emails and student IDs to avoid duplicates
+        $existingEmails = User::where('role', 'student')->pluck('email')->toArray();
+        $existingStudentIds = Student::pluck('student_id')->toArray();
+
         if ($sections->isEmpty()) {
             $this->command->warn('No 1st semester sections found. Please run SectionsSeeder first.');
             return;
@@ -47,12 +51,13 @@ class StudentSeeder extends Seeder
             'Mendoza', 'Flores', 'Torres', 'Rivera', 'Rodriguez', 'Morales', 'Lopez',
             'Gonzalez', 'Perez', 'Sanchez', 'Ramirez', 'Castillo', 'Del Rosario',
             'Aquino', 'Villanueva', 'Santiago', 'Magsaysay', 'Rizal', 'Bonifacio',
-            'Aquinaldo', 'Del Pilar', 'Jacinto', 'Luna', 'Malvar', 'Osmena', 'Roxas',
-            'Quirino', 'Magsaysay', 'Garcia', 'Macapagal', 'Marcos', 'Aquino', 'Ramos',
-            'Estrada', 'Arroyo', 'Aquino', 'Benigno', 'Duterte', 'Marcos Jr'
+            'Aquinaldo', 'Del Pilar', 'Jacinto', 'Luna', 'Malvar', 'Osmena', 'Roxas'
         ];
 
-        $existingEmails = User::pluck('email')->toArray();
+        // Initialize arrays for batch insert
+        $userData = [];
+        $studentData = [];
+
         $studentCount = 0;
         $totalStudentsNeeded = 980;
 
@@ -101,7 +106,7 @@ class StudentSeeder extends Seeder
                 // Calculate how many students for this specific section
                 $sectionQuota = $studentsPerSection + ($sectionIndex < $remainder ? 1 : 0);
                 $currentStudentsInSection = Student::where('section_id', $section->id)->count();
-                $studentsToAdd = min($sectionQuota, $section->capacity - $currentStudentsInSection);
+                $studentsToAdd = $studentsPerSection + ($sectionIndex < $remainder ? 1 : 0);
 
                 if ($studentsToAdd <= 0) {
                     $sectionIndex++;
@@ -113,8 +118,20 @@ class StudentSeeder extends Seeder
                 $lastName = $lastNames[array_rand($lastNames)];
                 $middleInitial = chr(rand(65, 90)) . '.';
                 $fullName = $firstName . ' ' . $middleInitial . ' ' . $lastName;
-                $studentIdNumber = date('Y') . '-' . str_pad($studentIndex + 1, 5, '0', STR_PAD_LEFT);
-                $email = strtolower($firstName . '.' . $lastName . ($studentIndex + 1) . '@uc.edu.ph');
+
+                // Generate unique student_id using the same logic as StudentController
+                $currentYear = date('Y');
+                $count = Student::whereYear('created_at', $currentYear)->count();
+                $nextNumber = str_pad($count + $studentCount + 1, 2, '0', STR_PAD_LEFT);
+                $studentIdNumber = $currentYear . '-' . $nextNumber;
+
+                // Skip if student_id already exists
+                if (in_array($studentIdNumber, $existingStudentIds)) {
+                    $studentIndex++;
+                    continue;
+                }
+
+                $email = strtolower($firstName . '.' . $lastName . ($studentCount + 1) . '@uc.edu.ph');
 
                 // Skip if email already exists
                 if (in_array($email, $existingEmails)) {
@@ -122,53 +139,62 @@ class StudentSeeder extends Seeder
                     continue;
                 }
 
-                // Create user
-                $user = User::firstOrCreate(
-                    ['email' => $email],
-                    [
-                        'first_name' => $firstName,
-                        'middle_name' => $middleInitial,
-                        'last_name' => $lastName,
-                        'name' => $fullName,
-                        'password' => Hash::make('password123'),
-                        'role' => 'student',
-                        'is_active' => true,
-                        'contact_number' => '09' . rand(10000000, 99999999),
-                        'address' => 'Cabuyao, Laguna',
-                        'gender' => rand(0, 1) ? 'Male' : 'Female',
-                        'birthday' => $this->generateRandomBirthday($year),
-                    ]
-                );
+                // Collect user data for batch insert
+                $userData[] = [
+                    'first_name' => $firstName,
+                    'middle_name' => $middleInitial,
+                    'last_name' => $lastName,
+                    'email' => $email,
+                    'password' => Hash::make('password123'),
+                    'role' => 'student',
+                    'is_active' => true,
+                    'contact_number' => '09' . rand(10000000, 99999999),
+                    'address' => 'Cabuyao, Laguna',
+                    'gender' => rand(0, 1) ? 'male' : 'female',
+                    'birthday' => $this->generateRandomBirthday($year),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
 
-                // Create student profile
-                Student::firstOrCreate(
-                    ['user_id' => $user->id],
-                    [
-                        'student_id' => $studentIdNumber,
-                        'course_id' => $course->id,
-                        'section_id' => $section->id,
-                        'year_level' => $year,
-                        'semester' => '1st',
-                        'contact_number' => $user->contact_number,
-                        'address' => $user->address,
-                        'emergency_contact_name' => $lastName . ' Family',
-                        'emergency_contact_number' => '09' . rand(10000000, 99999999),
-                        'status' => 'regular',
-                        'gender' => $user->gender,
-                        'birthday' => $user->birthday,
-                    ]
-                );
+                // Collect student data for batch insert
+                $studentData[] = [
+                    'student_id' => $studentIdNumber,
+                    'course_id' => $course->id,
+                    'section_id' => $section->id,
+                    'year_level' => $year,
+                    'semester' => '1st',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
 
                 $studentCount++;
                 $studentsCreatedForYear++;
                 $studentIndex++;
                 $existingEmails[] = $email;
+                $existingStudentIds[] = $studentIdNumber;
 
                 // Move to next section after filling current quota
                 if ($studentIndex % $sectionQuota == 0) {
                     $sectionIndex++;
                 }
             }
+        }
+
+        // Batch insert users and students
+        if (!empty($userData)) {
+            User::insert($userData);
+            // Get the inserted user IDs
+            $insertedUsers = User::whereIn('email', array_column($userData, 'email'))
+                ->orderBy('id', 'desc')
+                ->take(count($userData))
+                ->get();
+            
+            // Link student data with user IDs
+            foreach ($insertedUsers as $index => $user) {
+                $studentData[$index]['user_id'] = $user->id;
+            }
+            
+            Student::insert($studentData);
         }
 
         $this->command->info('Students seeded successfully!');

@@ -13,21 +13,16 @@ class Grade extends Model
     protected $fillable = [
         'student_id',
         'subject_id',
-        'faculty_id',
-        'academic_year',
-        'semester',
         'midterm_grade',
         'final_grade',
-        'total_grade',
+        'overall_grade',
         'remarks',
-        'is_locked',
     ];
 
     protected $casts = [
         'midterm_grade' => 'decimal:2',
         'final_grade' => 'decimal:2',
-        'total_grade' => 'decimal:2',
-        'is_locked' => 'boolean',
+        'overall_grade' => 'decimal:2',
     ];
 
     public function student(): BelongsTo
@@ -38,10 +33,5 @@ class Grade extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
-    }
-
-    public function faculty(): BelongsTo
-    {
-        return $this->belongsTo(Faculty::class);
     }
 }

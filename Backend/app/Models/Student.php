@@ -19,12 +19,6 @@ class Student extends Model
         'section_id',
         'year_level',
         'semester',
-        'contact_number',
-        'address',
-        'emergency_contact_name',
-        'emergency_contact_number',
-        'medical_records',
-        'status',
         'mother_name',
         'father_name',
         'guardian_name',
@@ -91,7 +85,7 @@ class Student extends Model
         
         // Get schedules for the student's section
         $sectionSchedules = Schedule::where('section_id', $this->section_id)
-            ->with(['subject', 'faculty.user', 'room'])
+            ->with(['subject', 'room'])
             ->get()
             ->keyBy('subject_id');
         

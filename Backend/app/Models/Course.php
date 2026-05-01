@@ -14,12 +14,7 @@ class Course extends Model
         'code',
         'name',
         'description',
-        'duration_years',
-        'is_active',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
+        'years',
     ];
 
     public function subjects(): HasMany

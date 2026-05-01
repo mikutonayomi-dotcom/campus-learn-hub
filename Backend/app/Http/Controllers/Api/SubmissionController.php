@@ -205,14 +205,16 @@ class SubmissionController extends Controller
             return response()->json([]);
         }
         
-        $facultyId = $faculty->id;
-        $assignmentIds = \App\Models\Assignment::where('faculty_id', $facultyId)->pluck('id');
-        $materialIds = \App\Models\Material::where('uploaded_by', $facultyId)->pluck('id');
-
+        // Get subjects taught by this faculty
+        $subjectIds = \App\Models\Subject::where('faculty_id', $faculty->id)->pluck('id');
+        
         $submissions = Submission::with(['student.user', 'assignment.subject', 'material.subject'])
-            ->where(function($query) use ($assignmentIds, $materialIds) {
-                $query->whereIn('assignment_id', $assignmentIds)
-                      ->orWhereIn('material_id', $materialIds);
+            ->where(function($query) use ($subjectIds) {
+                $query->whereHas('assignment', function($q) use ($subjectIds) {
+                    $q->whereIn('subject_id', $subjectIds);
+                })->orWhereHas('material', function($q) use ($subjectIds) {
+                    $q->whereIn('subject_id', $subjectIds);
+                });
             })
             ->orderBy('created_at', 'desc')
             ->get();

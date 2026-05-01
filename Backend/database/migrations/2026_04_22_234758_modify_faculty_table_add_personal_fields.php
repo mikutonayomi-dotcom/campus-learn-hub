@@ -14,17 +14,17 @@ return new class extends Migration
         Schema::table('faculty', function (Blueprint $table) {
             // Add employment status (skip if already exists from base migration)
             if (!Schema::hasColumn('faculty', 'employment_status')) {
-                $table->enum('employment_status', ['Full-time', 'Part-time'])->default('Full-time')->after('position');
+                $table->enum('employment_status', ['Full-time', 'Part-time'])->default('Full-time')->after('specialization');
             }
 
             // Add educational attainment
             if (!Schema::hasColumn('faculty', 'educational_attainment')) {
-                $table->string('educational_attainment')->nullable()->after('specialization');
+                $table->string('educational_attainment')->nullable()->after('employment_status');
             }
 
             // Add family information fields
             if (!Schema::hasColumn('faculty', 'mother_name')) {
-                $table->string('mother_name')->nullable()->after('office_location');
+                $table->string('mother_name')->nullable()->after('educational_attainment');
             }
             if (!Schema::hasColumn('faculty', 'father_name')) {
                 $table->string('father_name')->nullable()->after('mother_name');

@@ -17,13 +17,6 @@ class Section extends Model
         'course_id',
         'year_level',
         'semester',
-        'capacity',
-        'academic_year',
-        'is_active',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
     ];
 
     public function course(): BelongsTo

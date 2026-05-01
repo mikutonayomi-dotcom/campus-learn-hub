@@ -15,11 +15,7 @@ class ScheduleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Schedule::with(['subject', 'faculty.user', 'section', 'room']);
-
-        if ($request->has('faculty_id')) {
-            $query->where('faculty_id', $request->faculty_id);
-        }
+        $query = Schedule::with(['subject', 'section', 'room']);
 
         if ($request->has('section_id')) {
             $query->where('section_id', $request->section_id);
@@ -37,10 +33,6 @@ class ScheduleController extends Controller
             $query->where('day', $request->day);
         }
 
-        if ($request->has('academic_year')) {
-            $query->where('academic_year', $request->academic_year);
-        }
-
         return response()->json($query->get());
     }
 
@@ -48,14 +40,11 @@ class ScheduleController extends Controller
     {
         $validated = $request->validate([
             'subject_id' => 'required|exists:subjects,id',
-            'faculty_id' => 'required|exists:faculty,id',
             'section_id' => 'required|exists:sections,id',
             'room_id' => 'required|exists:rooms,id',
             'day' => 'required|in:monday,tuesday,wednesday,thursday,friday,saturday',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
-            'academic_year' => 'required|string',
-            'semester' => 'required|integer|min:1|max:2',
         ]);
 
         // Load related models for validation
@@ -77,8 +66,6 @@ class ScheduleController extends Controller
         $day = $validated['day'];
         $startTime = $validated['start_time'];
         $endTime = $validated['end_time'];
-        $academicYear = $validated['academic_year'];
-        $semester = $validated['semester'];
 
         // Helper function to check time overlap
         $hasTimeConflict = function ($query) use ($startTime, $endTime) {
@@ -96,8 +83,6 @@ class ScheduleController extends Controller
         // 2a. ROOM CONFLICT: Same room at same time
         $roomConflict = Schedule::where('room_id', $validated['room_id'])
             ->where('day', $day)
-            ->where('academic_year', $academicYear)
-            ->where('semester', $semester)
             ->where($hasTimeConflict)
             ->exists();
 
@@ -108,27 +93,9 @@ class ScheduleController extends Controller
             ], 422);
         }
 
-        // 2b. FACULTY CONFLICT: Same faculty at same time
-        $facultyConflict = Schedule::where('faculty_id', $validated['faculty_id'])
-            ->where('day', $day)
-            ->where('academic_year', $academicYear)
-            ->where('semester', $semester)
-            ->where($hasTimeConflict)
-            ->exists();
-
-        if ($facultyConflict) {
-            $faculty = \App\Models\Faculty::with('user')->find($validated['faculty_id']);
-            return response()->json([
-                'message' => 'Faculty schedule conflict',
-                'error' => "Faculty '{$faculty->user->name}' is already scheduled on {$day} from {$startTime} to {$endTime}."
-            ], 422);
-        }
-
-        // 2c. SECTION CONFLICT: Same section at same time
+        // 2b. SECTION CONFLICT: Same section at same time
         $sectionConflict = Schedule::where('section_id', $validated['section_id'])
             ->where('day', $day)
-            ->where('academic_year', $academicYear)
-            ->where('semester', $semester)
             ->where($hasTimeConflict)
             ->exists();
 
@@ -140,37 +107,31 @@ class ScheduleController extends Controller
         }
 
         $schedule = Schedule::create($validated);
-        return response()->json($schedule->load(['subject', 'faculty.user', 'section', 'room']), 201);
+        return response()->json($schedule->load(['subject', 'section', 'room']), 201);
     }
 
     public function show(Schedule $schedule)
     {
-        return response()->json($schedule->load(['subject', 'faculty.user', 'section', 'room', 'attendance.student.user']));
+        return response()->json($schedule->load(['subject', 'section', 'room', 'attendance.student.user']));
     }
 
     public function update(Request $request, Schedule $schedule)
     {
         $validated = $request->validate([
             'subject_id' => 'sometimes|exists:subjects,id',
-            'faculty_id' => 'sometimes|exists:faculty,id',
             'section_id' => 'sometimes|exists:sections,id',
             'room_id' => 'sometimes|exists:rooms,id',
             'day' => 'sometimes|in:monday,tuesday,wednesday,thursday,friday,saturday',
             'start_time' => 'sometimes|date_format:H:i',
             'end_time' => 'sometimes|date_format:H:i|after:start_time',
-            'academic_year' => 'sometimes|string',
-            'semester' => 'sometimes|integer|min:1|max:2',
         ]);
 
         // Get values (use existing if not provided)
         $roomId = $validated['room_id'] ?? $schedule->room_id;
-        $facultyId = $validated['faculty_id'] ?? $schedule->faculty_id;
         $sectionId = $validated['section_id'] ?? $schedule->section_id;
         $day = $validated['day'] ?? $schedule->day;
         $startTime = $validated['start_time'] ?? $schedule->start_time;
         $endTime = $validated['end_time'] ?? $schedule->end_time;
-        $academicYear = $validated['academic_year'] ?? $schedule->academic_year;
-        $semester = $validated['semester'] ?? $schedule->semester;
 
         // Load related models
         $section = \App\Models\Section::find($sectionId);
@@ -200,8 +161,6 @@ class ScheduleController extends Controller
         // Room conflict
         $roomConflict = Schedule::where('room_id', $roomId)
             ->where('day', $day)
-            ->where('academic_year', $academicYear)
-            ->where('semester', $semester)
             ->where('id', '!=', $schedule->id)
             ->where($hasTimeConflict)
             ->exists();
@@ -213,28 +172,9 @@ class ScheduleController extends Controller
             ], 422);
         }
 
-        // Faculty conflict
-        $facultyConflict = Schedule::where('faculty_id', $facultyId)
-            ->where('day', $day)
-            ->where('academic_year', $academicYear)
-            ->where('semester', $semester)
-            ->where('id', '!=', $schedule->id)
-            ->where($hasTimeConflict)
-            ->exists();
-
-        if ($facultyConflict) {
-            $faculty = \App\Models\Faculty::with('user')->find($facultyId);
-            return response()->json([
-                'message' => 'Faculty schedule conflict',
-                'error' => "Faculty '{$faculty->user->name}' is already scheduled on {$day} from {$startTime} to {$endTime}."
-            ], 422);
-        }
-
         // Section conflict
         $sectionConflict = Schedule::where('section_id', $sectionId)
             ->where('day', $day)
-            ->where('academic_year', $academicYear)
-            ->where('semester', $semester)
             ->where('id', '!=', $schedule->id)
             ->where($hasTimeConflict)
             ->exists();
@@ -247,7 +187,7 @@ class ScheduleController extends Controller
         }
 
         $schedule->update($validated);
-        return response()->json($schedule->load(['subject', 'faculty.user', 'section', 'room']));
+        return response()->json($schedule->load(['subject', 'section', 'room']));
     }
 
     public function destroy(Schedule $schedule)
@@ -259,20 +199,10 @@ class ScheduleController extends Controller
     public function mySchedule(Request $request)
     {
         try {
-            if ($request->user()->isFaculty()) {
-                $faculty = $request->user()->faculty;
-
-                if (!$faculty) {
-                    return response()->json([
-                        'message' => 'Faculty profile not found. Please contact administrator to set up your faculty profile.'
-                    ], 404);
-                }
-
-                $schedules = Schedule::with(['subject', 'section', 'room', 'attendance'])
-                    ->where('faculty_id', $faculty->id)
-                    ->get();
-            } else {
-                $student = $request->user()->student;
+            $user = $request->user();
+            
+            if ($user->isStudent()) {
+                $student = $user->student;
 
                 if (!$student) {
                     return response()->json([
@@ -282,9 +212,30 @@ class ScheduleController extends Controller
 
                 // Use the new schedules() method that combines curriculum with actual schedules
                 $schedules = $student->schedules();
+                return response()->json($schedules);
+                
+            } elseif ($user->isFaculty()) {
+                $faculty = $user->faculty;
+
+                if (!$faculty) {
+                    return response()->json([
+                        'message' => 'Faculty profile not found. Please contact administrator to set up your faculty profile.'
+                    ], 404);
+                }
+
+                // Get faculty schedules with related data
+                $schedules = $faculty->schedules()
+                    ->with(['subject', 'section', 'room'])
+                    ->get()
+                    ->groupBy(function ($schedule) {
+                        return $schedule->day;
+                    });
+
+                return response()->json($schedules);
             }
 
-            return response()->json($schedules);
+            return response()->json([]);
+            
         } catch (\Exception $e) {
             \Log::error('mySchedule error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch schedule'], 500);
@@ -295,34 +246,26 @@ class ScheduleController extends Controller
     {
         $validated = $request->validate([
             'section_id' => 'required|exists:sections,id',
-            'semester' => 'required|integer|min:1|max:2',
-            'academic_year' => 'required|string',
         ]);
 
         $section = Section::with('course')->find($validated['section_id']);
-        $semester = $validated['semester'];
-        $academicYear = $validated['academic_year'];
 
-        // Get curriculum subjects for this section's course, year level, and semester
+        // Get curriculum subjects for this section's course, year level
         $courseSubjects = CourseSubject::where('course_id', $section->course_id)
             ->where('year_level', $section->year_level)
-            ->where('semester', $semester)
-            ->where('is_active', true)
+            ->where('semester', $section->semester)
             ->with('subject')
             ->get();
 
         if ($courseSubjects->isEmpty()) {
             return response()->json([
                 'message' => 'No curriculum subjects found for this section',
-                'error' => "No subjects defined for {$section->course->name} Year {$section->year_level} Semester {$semester}"
+                'error' => "No subjects defined for {$section->course->name} Year {$section->year_level} Semester {$section->semester}"
             ], 404);
         }
 
-        // Get available faculty
-        $faculty = Faculty::with('user')->where('is_active', true)->get();
-
         // Get available rooms
-        $rooms = Room::where('is_active', true)->get();
+        $rooms = Room::get();
 
         // Time slots (7:00 AM to 7:00 PM, 1-hour slots)
         $timeSlots = [
@@ -333,25 +276,14 @@ class ScheduleController extends Controller
         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
         $generatedSchedules = [];
-        $facultyWorkload = []; // Track faculty hours per day
         $roomUsage = []; // Track room usage
 
         foreach ($courseSubjects as $courseSubject) {
             $subject = $courseSubject->subject;
-            $sessionsPerWeek = $subject->units >= 3 ? 3 : 2; // 3-unit subjects meet 3x/week, 2-unit meet 2x/week
+            $sessionsPerWeek = 2; // Default to 2 sessions per week
 
             // Determine subject type for room assignment
             $subjectType = $this->determineSubjectType($subject->code, $subject->name);
-
-            // Assign faculty based on specialization
-            $assignedFaculty = $this->assignFaculty($faculty, $subject, $facultyWorkload);
-
-            if (!$assignedFaculty) {
-                return response()->json([
-                    'message' => 'No available faculty for subject',
-                    'error' => "No faculty available with specialization for {$subject->name}"
-                ], 422);
-            }
 
             // Assign room based on subject type
             $assignedRoom = $this->assignRoom($rooms, $subjectType);
@@ -364,7 +296,7 @@ class ScheduleController extends Controller
             }
 
             // Distribute sessions across the week
-            $assignedDays = $this->distributeSessions($days, $sessionsPerWeek, $section->id, $academicYear, $semester);
+            $assignedDays = $this->distributeSessions($days, $sessionsPerWeek, $section->id);
 
             if (count($assignedDays) < $sessionsPerWeek) {
                 return response()->json([
@@ -379,10 +311,7 @@ class ScheduleController extends Controller
                     $timeSlots,
                     $day,
                     $assignedRoom->id,
-                    $assignedFaculty->id,
-                    $section->id,
-                    $academicYear,
-                    $semester
+                    $section->id
                 );
 
                 if (!$timeSlot) {
@@ -395,20 +324,17 @@ class ScheduleController extends Controller
                 // Create schedule
                 $schedule = Schedule::create([
                     'subject_id' => $subject->id,
-                    'faculty_id' => $assignedFaculty->id,
                     'section_id' => $section->id,
                     'room_id' => $assignedRoom->id,
                     'day' => $day,
                     'start_time' => $timeSlot,
                     'end_time' => date('H:i', strtotime($timeSlot) + 3600), // 1 hour duration
-                    'academic_year' => $academicYear,
-                    'semester' => $semester,
                 ]);
 
-                $generatedSchedules[] = $schedule->load(['subject', 'faculty.user', 'section', 'room']);
+                $generatedSchedules[] = $schedule->load(['subject', 'section', 'room']);
 
                 // Update workload tracking
-                $facultyWorkload[$assignedFaculty->id][$day] = ($facultyWorkload[$assignedFaculty->id][$day] ?? 0) + 1;
+                $roomUsage[$assignedRoom->id][$day] = ($roomUsage[$assignedRoom->id][$day] ?? 0) + 1;
             }
         }
 
@@ -427,7 +353,7 @@ class ScheduleController extends Controller
 
         foreach ($programmingSubjects as $prefix) {
             if (strpos($code, $prefix) === 0) {
-                return 'laboratory';
+                return 'lab';
             }
         }
 
@@ -447,73 +373,6 @@ class ScheduleController extends Controller
         return 'classroom';
     }
 
-    private function assignFaculty($faculty, $subject, &$facultyWorkload)
-    {
-        // Try to find faculty with matching specialization
-        $subjectKeywords = $this->extractSubjectKeywords($subject->code, $subject->name);
-
-        foreach ($faculty as $f) {
-            // Check if faculty has less than 6 hours per day
-            $dailyHours = 0;
-            if (isset($facultyWorkload[$f->id])) {
-                $dailyHours = max($facultyWorkload[$f->id]);
-            }
-
-            if ($dailyHours >= 6) {
-                continue; // Skip if already at max daily hours
-            }
-
-            // Check specialization match
-            if ($f->specialization) {
-                foreach ($subjectKeywords as $keyword) {
-                    if (stripos($f->specialization, $keyword) !== false) {
-                        return $f;
-                    }
-                }
-            }
-        }
-
-        // If no specialization match, assign any available faculty
-        foreach ($faculty as $f) {
-            $dailyHours = 0;
-            if (isset($facultyWorkload[$f->id])) {
-                $dailyHours = max($facultyWorkload[$f->id]);
-            }
-
-            if ($dailyHours < 6) {
-                return $f;
-            }
-        }
-
-        return null;
-    }
-
-    private function extractSubjectKeywords($code, $name)
-    {
-        $keywords = [];
-
-        if (strpos($code, 'CC') !== false || strpos($name, 'Programming') !== false) {
-            $keywords[] = 'programming';
-        }
-        if (strpos($code, 'IT') !== false && strpos($name, 'Networking') !== false) {
-            $keywords[] = 'networking';
-        }
-        if (strpos($name, 'Database') !== false) {
-            $keywords[] = 'database';
-        }
-        if (strpos($name, 'Web') !== false) {
-            $keywords[] = 'web';
-        }
-        if (strpos($name, 'Math') !== false) {
-            $keywords[] = 'mathematics';
-        }
-        if (strpos($name, 'Security') !== false) {
-            $keywords[] = 'security';
-        }
-
-        return $keywords;
-    }
-
     private function assignRoom($rooms, $subjectType)
     {
         // Filter rooms by type
@@ -527,7 +386,7 @@ class ScheduleController extends Controller
         return $matchingRooms->first();
     }
 
-    private function distributeSessions($days, $sessionsNeeded, $sectionId, $academicYear, $semester)
+    private function distributeSessions($days, $sessionsNeeded, $sectionId)
     {
         $assignedDays = [];
 
@@ -540,8 +399,6 @@ class ScheduleController extends Controller
             // Check if section already has a class on this day
             $hasConflict = Schedule::where('section_id', $sectionId)
                 ->where('day', $day)
-                ->where('academic_year', $academicYear)
-                ->where('semester', $semester)
                 ->exists();
 
             if (!$hasConflict) {
@@ -552,7 +409,7 @@ class ScheduleController extends Controller
         return $assignedDays;
     }
 
-    private function findAvailableTimeSlot($timeSlots, $day, $roomId, $facultyId, $sectionId, $academicYear, $semester)
+    private function findAvailableTimeSlot($timeSlots, $day, $roomId, $sectionId)
     {
         foreach ($timeSlots as $timeSlot) {
             $endTime = date('H:i', strtotime($timeSlot) + 3600);
@@ -560,8 +417,6 @@ class ScheduleController extends Controller
             // Check room availability
             $roomConflict = Schedule::where('room_id', $roomId)
                 ->where('day', $day)
-                ->where('academic_year', $academicYear)
-                ->where('semester', $semester)
                 ->where('start_time', '<', $endTime)
                 ->where('end_time', '>', $timeSlot)
                 ->exists();
@@ -570,24 +425,9 @@ class ScheduleController extends Controller
                 continue;
             }
 
-            // Check faculty availability
-            $facultyConflict = Schedule::where('faculty_id', $facultyId)
-                ->where('day', $day)
-                ->where('academic_year', $academicYear)
-                ->where('semester', $semester)
-                ->where('start_time', '<', $endTime)
-                ->where('end_time', '>', $timeSlot)
-                ->exists();
-
-            if ($facultyConflict) {
-                continue;
-            }
-
             // Check section availability
             $sectionConflict = Schedule::where('section_id', $sectionId)
                 ->where('day', $day)
-                ->where('academic_year', $academicYear)
-                ->where('semester', $semester)
                 ->where('start_time', '<', $endTime)
                 ->where('end_time', '>', $timeSlot)
                 ->exists();

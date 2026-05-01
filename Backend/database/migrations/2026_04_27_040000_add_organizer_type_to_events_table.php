@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('events', function (Blueprint $table) {
             if (!Schema::hasColumn('events', 'organizer_type')) {
-                $table->string('organizer_type')->default('faculty')->after('organized_by');
+                $table->string('organizer_type')->default('faculty')->after('status');
             }
         });
     }

@@ -24,17 +24,17 @@ class SectionsSeeder extends Seeder
         // 4th year: Sections A-D (4 sections per semester)
         $sectionsConfig = [
             // 1st Year - 5 sections per semester
-            ['year_level' => 1, 'semester' => 1, 'sections' => ['A', 'B', 'C', 'D', 'E']],
-            ['year_level' => 1, 'semester' => 2, 'sections' => ['A', 'B', 'C', 'D', 'E']],
+            ['year_level' => 1, 'semester' => '1st', 'sections' => ['A', 'B', 'C', 'D', 'E']],
+            ['year_level' => 1, 'semester' => '2nd', 'sections' => ['A', 'B', 'C', 'D', 'E']],
             // 2nd Year - 5 sections per semester
-            ['year_level' => 2, 'semester' => 1, 'sections' => ['A', 'B', 'C', 'D', 'E']],
-            ['year_level' => 2, 'semester' => 2, 'sections' => ['A', 'B', 'C', 'D', 'E']],
+            ['year_level' => 2, 'semester' => '1st', 'sections' => ['A', 'B', 'C', 'D', 'E']],
+            ['year_level' => 2, 'semester' => '2nd', 'sections' => ['A', 'B', 'C', 'D', 'E']],
             // 3rd Year - 5 sections per semester
-            ['year_level' => 3, 'semester' => 1, 'sections' => ['A', 'B', 'C', 'D', 'E']],
-            ['year_level' => 3, 'semester' => 2, 'sections' => ['A', 'B', 'C', 'D', 'E']],
+            ['year_level' => 3, 'semester' => '1st', 'sections' => ['A', 'B', 'C', 'D', 'E']],
+            ['year_level' => 3, 'semester' => '2nd', 'sections' => ['A', 'B', 'C', 'D', 'E']],
             // 4th Year - 4 sections per semester
-            ['year_level' => 4, 'semester' => 1, 'sections' => ['A', 'B', 'C', 'D']],
-            ['year_level' => 4, 'semester' => 2, 'sections' => ['A', 'B', 'C', 'D']],
+            ['year_level' => 4, 'semester' => '1st', 'sections' => ['A', 'B', 'C', 'D']],
+            ['year_level' => 4, 'semester' => '2nd', 'sections' => ['A', 'B', 'C', 'D']],
         ];
 
         $currentYear = date('Y');
@@ -50,7 +50,6 @@ class SectionsSeeder extends Seeder
             $courseSubjects = CourseSubject::where('course_id', $bsit->id)
                 ->where('year_level', $yearLevel)
                 ->where('semester', $semester)
-                ->where('is_active', true)
                 ->get();
 
             foreach ($sectionLetters as $letter) {
@@ -61,12 +60,7 @@ class SectionsSeeder extends Seeder
                         'name' => $sectionName,
                         'course_id' => $bsit->id,
                         'year_level' => $yearLevel,
-                        'semester' => $semester === 1 ? '1st' : '2nd',
-                    ],
-                    [
-                        'academic_year' => $academicYear,
-                        'capacity' => 40,
-                        'is_active' => true,
+                        'semester' => $semester,
                     ]
                 );
 

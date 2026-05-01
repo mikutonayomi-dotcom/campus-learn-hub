@@ -17,17 +17,6 @@ class Announcement extends Model
         'subject_id',
         'course_id',
         'section_id',
-        'target_audience',
-        'priority',
-        'is_published',
-        'published_at',
-        'expires_at',
-    ];
-
-    protected $casts = [
-        'is_published' => 'boolean',
-        'published_at' => 'datetime',
-        'expires_at' => 'datetime',
     ];
 
     public function author(): BelongsTo

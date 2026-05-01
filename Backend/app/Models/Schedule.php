@@ -13,14 +13,11 @@ class Schedule extends Model
 
     protected $fillable = [
         'subject_id',
-        'faculty_id',
         'section_id',
         'room_id',
         'day',
         'start_time',
         'end_time',
-        'academic_year',
-        'semester',
     ];
 
     protected $casts = [
@@ -31,11 +28,6 @@ class Schedule extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
-    }
-
-    public function faculty(): BelongsTo
-    {
-        return $this->belongsTo(Faculty::class);
     }
 
     public function section(): BelongsTo

@@ -21,37 +21,20 @@ class AnnouncementController extends Controller
         if ($request->user()->isStudent()) {
             $student = $request->user()->student;
             $query->where(function ($q) use ($student) {
-                $q->where('target_audience', 'all')
-                  ->orWhere('target_audience', 'students')
-                  ->orWhere('course_id', $student->course_id)
-                  ->orWhere('section_id', $student->section_id);
+                $q->where('course_id', $student->course_id)
+                  ->orWhere('section_id', $student->section_id)
+                  ->orWhereNull('course_id')
+                  ->orWhereNull('section_id');
             });
         } elseif ($request->user()->isFaculty()) {
+            // Faculty see all announcements
             $query->where(function ($q) {
-                $q->where('target_audience', 'all')
-                  ->orWhere('target_audience', 'faculty');
-            });
-        } elseif ($request->user()->isAdmin()) {
-            $query->where(function ($q) {
-                $q->where('target_audience', 'all')
-                  ->orWhere('target_audience', 'admin');
+                $q->whereNull('course_id')
+                  ->orWhereNull('section_id');
             });
         }
 
-        // Only show published announcements
-        $query->where('is_published', true);
-
-        // Filter out expired announcements
-        $query->where(function ($q) {
-            $q->whereNull('expires_at')
-              ->orWhere('expires_at', '>', now());
-        });
-
-        // Order by priority and published date
-        $query->orderByRaw("FIELD(priority, 'high', 'medium', 'low')")
-              ->orderBy('published_at', 'desc');
-
-        return response()->json($query->get());
+        return response()->json($query->orderBy('created_at', 'desc')->get());
     }
 
     public function store(Request $request)
@@ -62,16 +45,9 @@ class AnnouncementController extends Controller
             'subject_id' => 'nullable|exists:subjects,id',
             'course_id' => 'nullable|exists:courses,id',
             'section_id' => 'nullable|exists:sections,id',
-            'target_audience' => 'required|in:all,students,faculty,admin',
-            'priority' => 'required|in:low,medium,high',
-            'is_published' => 'sometimes|boolean',
-            'published_at' => 'nullable|date',
-            'expires_at' => 'nullable|date|after_or_equal:published_at',
         ]);
 
         $validated['author_id'] = $request->user()->id;
-        $validated['is_published'] = $validated['is_published'] ?? true;
-        $validated['published_at'] = $validated['published_at'] ?? now();
 
         $announcement = Announcement::create($validated);
 
@@ -88,11 +64,9 @@ class AnnouncementController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'content' => 'sometimes|string',
-            'target_audience' => 'sometimes|in:all,students,faculty,admin',
-            'priority' => 'sometimes|in:low,medium,high',
-            'is_published' => 'sometimes|boolean',
-            'published_at' => 'nullable|date',
-            'expires_at' => 'nullable|date|after:published_at',
+            'subject_id' => 'nullable|exists:subjects,id',
+            'course_id' => 'nullable|exists:courses,id',
+            'section_id' => 'nullable|exists:sections,id',
         ]);
 
         $announcement->update($validated);

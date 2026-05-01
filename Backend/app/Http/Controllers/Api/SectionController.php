@@ -20,8 +20,8 @@ class SectionController extends Controller
             $query->where('year_level', $request->year_level);
         }
 
-        if ($request->has('academic_year')) {
-            $query->where('academic_year', $request->academic_year);
+        if ($request->has('semester')) {
+            $query->where('semester', $request->semester);
         }
 
         $sections = $query->get();
@@ -40,9 +40,7 @@ class SectionController extends Controller
             'name' => 'required|string',
             'course_id' => 'required|exists:courses,id',
             'year_level' => 'required|integer|min:1|max:5',
-            'semester' => 'required|in:1st,2nd',
-            'capacity' => 'required|integer|min:1|max:100',
-            'academic_year' => 'required|string',
+            'semester' => 'required|in:1,2',
         ]);
 
         $section = Section::create($validated);
@@ -52,7 +50,7 @@ class SectionController extends Controller
 
     public function show(Section $section)
     {
-        return response()->json($section->load(['course', 'schedules.subject', 'schedules.faculty.user', 'schedules.room']));
+        return response()->json($section->load(['course', 'schedules.subject', 'schedules.room']));
     }
 
     public function update(Request $request, Section $section)
@@ -60,10 +58,7 @@ class SectionController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'year_level' => 'sometimes|integer|min:1|max:5',
-            'semester' => 'sometimes|in:1st,2nd',
-            'capacity' => 'sometimes|integer|min:1|max:100',
-            'academic_year' => 'sometimes|string',
-            'is_active' => 'sometimes|boolean',
+            'semester' => 'sometimes|in:1,2',
         ]);
 
         $section->update($validated);
@@ -87,8 +82,6 @@ class SectionController extends Controller
             'section' => $section->load('course'),
             'students' => $students,
             'student_count' => $students->count(),
-            'capacity' => $section->capacity,
-            'available_slots' => $section->capacity - $students->count(),
         ]);
     }
 }

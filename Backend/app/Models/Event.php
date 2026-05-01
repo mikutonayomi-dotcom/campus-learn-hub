@@ -14,41 +14,37 @@ class Event extends Model
     protected $fillable = [
         'title',
         'description',
-        'type',
+        'date',
         'start_date',
         'end_date',
+        'time',
+        'location',
         'venue',
+        'status',
+        'type',
         'organized_by',
         'organizer_type',
-        'status',
-        'admin_remarks',
-        'approved_by',
-        'approved_at',
     ];
 
     protected $casts = [
-        'start_date' => 'datetime',
-        'end_date' => 'datetime',
-        'approved_at' => 'datetime',
+        'date' => 'date',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'time' => 'datetime',
     ];
-
-    public function organizer()
-    {
-        if ($this->organizer_type === 'faculty') {
-            return $this->belongsTo(Faculty::class, 'organized_by');
-        }
-        return $this->belongsTo(User::class, 'organized_by');
-    }
-
-    public function approver(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
 
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(Student::class, 'event_participants')
             ->withPivot(['status', 'remarks'])
             ->withTimestamps();
+    }
+
+    public function organizer(): BelongsTo
+    {
+        if ($this->organizer_type === 'faculty') {
+            return $this->belongsTo(Faculty::class, 'organized_by');
+        }
+        return $this->belongsTo(User::class, 'organized_by');
     }
 }

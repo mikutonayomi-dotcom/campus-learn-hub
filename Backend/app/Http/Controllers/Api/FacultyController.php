@@ -12,16 +12,13 @@ class FacultyController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Faculty::with(['user', 'schedules']);
-
-        if ($request->has('department')) {
-            $query->where('department', $request->department);
-        }
+        $query = Faculty::with(['user']);
 
         if ($request->has('search')) {
             $search = $request->search;
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             })->orWhere('employee_id', 'like', "%{$search}%");
         }
@@ -39,14 +36,11 @@ class FacultyController extends Controller
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:8',
             'employee_id' => 'required|string|unique:faculty',
-            'department' => 'required|string',
-            'position' => 'required|string',
             'employment_status' => 'nullable|in:Full-time,Part-time',
             'specialization' => 'nullable|string',
             'educational_attainment' => 'nullable|string',
             'contact_number' => 'nullable|string',
             'address' => 'nullable|string',
-            'office_location' => 'nullable|string',
             'mother_name' => 'nullable|string',
             'father_name' => 'nullable|string',
             'gender' => 'nullable|in:male,female,other',
@@ -70,7 +64,6 @@ class FacultyController extends Controller
             'middle_name' => $validated['middlename'] ?? null,
             'last_name' => $validated['lastname'],
             'suffix' => $validated['suffix'] ?? null,
-            'name' => $fullName,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'faculty',
@@ -87,13 +80,9 @@ class FacultyController extends Controller
         $faculty = Faculty::create([
             'user_id' => $user->id,
             'employee_id' => $validated['employee_id'],
-            'department' => $validated['department'],
-            'position' => $validated['position'],
             'employment_status' => $validated['employment_status'] ?? 'Full-time',
             'specialization' => $validated['specialization'] ?? null,
             'educational_attainment' => $validated['educational_attainment'] ?? null,
-            'contact_number' => $validated['contact_number'] ?? null,
-            'office_location' => $validated['office_location'] ?? null,
             'mother_name' => $validated['mother_name'] ?? null,
             'father_name' => $validated['father_name'] ?? null,
             'gender' => $validated['gender'] ?? null,
@@ -116,18 +105,15 @@ class FacultyController extends Controller
     public function update(Request $request, Faculty $faculty)
     {
         $validated = $request->validate([
-            'department' => 'sometimes|string',
-            'position' => 'sometimes|string',
             'specialization' => 'nullable|string',
-            'contact_number' => 'nullable|string',
-            'office_location' => 'nullable|string',
-            'is_active' => 'sometimes|boolean',
+            'employment_status' => 'nullable|string',
+            'educational_attainment' => 'nullable|string',
         ]);
 
         $faculty->update($validated);
 
-        if ($request->has('name') || $request->has('email') || $request->has('profile_image')) {
-            $faculty->user->update($request->only(['name', 'email', 'profile_image']));
+        if ($request->has('first_name') || $request->has('last_name') || $request->has('email') || $request->has('profile_image')) {
+            $faculty->user->update($request->only(['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'profile_image']));
         }
 
         return response()->json($faculty->load('user'));
@@ -160,15 +146,24 @@ class FacultyController extends Controller
     {
         try {
             $faculty = $request->user()->faculty;
+            $user = $request->user();
             
             $validated = $request->validate([
                 'contact_number' => 'nullable|string',
                 'address' => 'nullable|string',
-                'office_location' => 'nullable|string',
                 'specialization' => 'nullable|string',
             ]);
 
-            $faculty->update($validated);
+            // Update faculty-specific fields
+            $faculty->update([
+                'specialization' => $validated['specialization'] ?? null,
+            ]);
+
+            // Update user fields
+            $user->update([
+                'contact_number' => $validated['contact_number'] ?? null,
+                'address' => $validated['address'] ?? null,
+            ]);
 
             return response()->json($faculty->load('user'));
         } catch (\Exception $e) {
@@ -185,17 +180,22 @@ class FacultyController extends Controller
 
     public function myProfile(Request $request)
     {
-        $faculty = $request->user()->faculty;
-        
-        if (!$faculty) {
-            return response()->json([
-                'message' => 'Faculty profile not found. Please contact administrator to set up your faculty profile.'
-            ], 404);
+        try {
+            $faculty = $request->user()->faculty;
+
+            if (!$faculty) {
+                return response()->json([
+                    'message' => 'Faculty profile not found. Please contact administrator to set up your faculty profile.'
+                ], 404);
+            }
+
+            return response()->json($faculty->load([
+                'user', 'schedules.subject', 'schedules.section', 'schedules.room'
+            ]));
+        } catch (\Exception $e) {
+            \Log::error('Faculty myProfile error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch faculty profile'], 500);
         }
-        
-        return response()->json($faculty->load([
-            'user', 'schedules.subject', 'schedules.section', 'schedules.room'
-        ]));
     }
 
     public function myStudents(Request $request)

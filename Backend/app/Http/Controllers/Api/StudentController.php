@@ -12,86 +12,93 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::with(['user', 'course', 'section', 'skills', 'organizations', 'violations', 'achievements']);
+        try {
+            $query = Student::with(['user', 'course', 'section', 'violations', 'achievements']);
 
-        if ($request->has('course_id')) {
-            $query->where('course_id', $request->course_id);
-        }
-
-        if ($request->has('section_id')) {
-            $query->where('section_id', $request->section_id);
-        }
-
-        if ($request->has('year_level')) {
-            $query->where('year_level', $request->year_level);
-        }
-
-        if ($request->has('semester')) {
-            $query->where('semester', $request->semester);
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Advanced filters
-        if ($request->has('skill_id')) {
-            $query->whereHas('skills', function ($q) use ($request) {
-                $q->where('skill_id', $request->skill_id);
-            });
-        }
-
-        if ($request->has('skill_ids')) {
-            $skillIds = explode(',', $request->skill_ids);
-            $query->whereHas('skills', function ($q) use ($skillIds) {
-                $q->whereIn('skill_id', $skillIds);
-            });
-        }
-
-        if ($request->has('has_violations')) {
-            if ($request->has_violations === 'true') {
-                $query->whereHas('violations');
-            } else {
-                $query->whereDoesntHave('violations');
+            if ($request->has('course_id')) {
+                $query->where('course_id', $request->course_id);
             }
-        }
 
-        if ($request->has('violation_severity')) {
-            $query->whereHas('violations', function ($q) use ($request) {
-                $q->where('severity', $request->violation_severity);
-            });
-        }
-
-        if ($request->has('has_achievements')) {
-            if ($request->has_achievements === 'true') {
-                $query->whereHas('achievements');
-            } else {
-                $query->whereDoesntHave('achievements');
+            if ($request->has('section_id')) {
+                $query->where('section_id', $request->section_id);
             }
-        }
 
-        if ($request->has('organization_id')) {
-            $query->whereHas('organizations', function ($q) use ($request) {
-                $q->where('organization_id', $request->organization_id);
-            });
-        }
+            if ($request->has('year_level')) {
+                $query->where('year_level', $request->year_level);
+            }
 
-        if ($request->has('organization_ids')) {
-            $orgIds = explode(',', $request->organization_ids);
-            $query->whereHas('organizations', function ($q) use ($orgIds) {
-                $q->whereIn('organization_id', $orgIds);
-            });
-        }
+            if ($request->has('semester')) {
+                $query->where('semester', $request->semester);
+            }
 
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            })->orWhere('student_id', 'like', "%{$search}%");
-        }
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
 
-        return response()->json($query->get());
+            // Advanced filters
+            if ($request->has('skill_id')) {
+                $query->whereHas('skills', function ($q) use ($request) {
+                    $q->where('skill_id', $request->skill_id);
+                });
+            }
+
+            if ($request->has('skill_ids')) {
+                $skillIds = explode(',', $request->skill_ids);
+                $query->whereHas('skills', function ($q) use ($skillIds) {
+                    $q->whereIn('skill_id', $skillIds);
+                });
+            }
+
+            if ($request->has('has_violations')) {
+                if ($request->has_violations === 'true') {
+                    $query->whereHas('violations');
+                } else {
+                    $query->whereDoesntHave('violations');
+                }
+            }
+
+            if ($request->has('violation_severity')) {
+                $query->whereHas('violations', function ($q) use ($request) {
+                    $q->where('severity', $request->violation_severity);
+                });
+            }
+
+            if ($request->has('has_achievements')) {
+                if ($request->has_achievements === 'true') {
+                    $query->whereHas('achievements');
+                } else {
+                    $query->whereDoesntHave('achievements');
+                }
+            }
+
+            if ($request->has('organization_id')) {
+                $query->whereHas('organizations', function ($q) use ($request) {
+                    $q->where('organization_id', $request->organization_id);
+                });
+            }
+
+            if ($request->has('organization_ids')) {
+                $orgIds = explode(',', $request->organization_ids);
+                $query->whereHas('organizations', function ($q) use ($orgIds) {
+                    $q->whereIn('organization_id', $orgIds);
+                });
+            }
+
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->whereHas('user', function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                })->orWhere('student_id', 'like', "%{$search}%");
+            }
+
+            return response()->json($query->get());
+        } catch (\Exception $e) {
+            \Log::error('Student index error: ' . $e->getMessage());
+            \Log::error('Student index trace: ' . $e->getTraceAsString());
+            return response()->json(['error' => 'Failed to fetch students'], 500);
+        }
     }
 
     public function store(Request $request)
@@ -136,7 +143,6 @@ class StudentController extends Controller
             'middle_name' => $validated['middlename'] ?? null,
             'last_name' => $validated['lastname'],
             'suffix' => $validated['suffix'] ?? null,
-            'name' => $fullName,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => 'student',
@@ -158,17 +164,9 @@ class StudentController extends Controller
             'section_id' => $validated['section_id'] ?? null,
             'year_level' => $validated['year_level'],
             'semester' => $validated['semester'] ?? null,
-            'contact_number' => $validated['contact_number'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
-            'emergency_contact_number' => $validated['emergency_contact_number'] ?? null,
             'mother_name' => $validated['mother_name'] ?? null,
             'father_name' => $validated['father_name'] ?? null,
             'guardian_name' => $validated['guardian_name'] ?? null,
-            'gender' => $validated['gender'] ?? null,
-            'birthday' => $validated['birthday'] ?? null,
-            'birthplace' => $validated['birthplace'] ?? null,
-            'religion' => $validated['religion'] ?? null,
         ]);
 
         return response()->json($student->load('user', 'course', 'section'), 201);
@@ -188,17 +186,12 @@ class StudentController extends Controller
             'course_id' => 'sometimes|exists:courses,id',
             'section_id' => 'sometimes|nullable|exists:sections,id',
             'year_level' => 'sometimes|integer|min:1|max:5',
-            'contact_number' => 'nullable|string',
-            'address' => 'nullable|string',
-            'emergency_contact_name' => 'nullable|string',
-            'emergency_contact_number' => 'nullable|string',
-            'status' => 'sometimes|in:regular,irregular,probation,suspended,graduated',
         ]);
 
         $student->update($validated);
 
-        if ($request->has('name') || $request->has('email') || $request->has('profile_image')) {
-            $student->user->update($request->only(['name', 'email', 'profile_image']));
+        if ($request->has('first_name') || $request->has('last_name') || $request->has('email') || $request->has('profile_image')) {
+            $student->user->update($request->only(['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'profile_image']));
         }
 
         return response()->json($student->load('user', 'course', 'section'));
@@ -231,7 +224,8 @@ class StudentController extends Controller
     {
         try {
             $student = $request->user()->student;
-            
+            $user = $request->user();
+
             $validated = $request->validate([
                 'contact_number' => 'nullable|string',
                 'address' => 'nullable|string',
@@ -239,7 +233,7 @@ class StudentController extends Controller
                 'emergency_contact_number' => 'nullable|string',
             ]);
 
-            $student->update($validated);
+            $user->update($validated);
 
             return response()->json($student->load('user'));
         } catch (\Exception $e) {

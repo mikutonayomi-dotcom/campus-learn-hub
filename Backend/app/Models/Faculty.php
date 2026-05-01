@@ -16,14 +16,9 @@ class Faculty extends Model
     protected $fillable = [
         'user_id',
         'employee_id',
-        'department',
-        'position',
-        'employment_status',
         'specialization',
+        'employment_status',
         'educational_attainment',
-        'contact_number',
-        'office_location',
-        'is_active',
         'mother_name',
         'father_name',
         'gender',
@@ -33,7 +28,7 @@ class Faculty extends Model
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'employment_status' => 'string',
     ];
 
     public function user(): BelongsTo
@@ -43,7 +38,7 @@ class Faculty extends Model
 
     public function schedules(): HasMany
     {
-        return $this->hasMany(Schedule::class);
+        return $this->hasMany(Schedule::class, 'faculty_id');
     }
 
     public function materials(): HasMany

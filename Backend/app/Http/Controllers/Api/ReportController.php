@@ -21,8 +21,6 @@ class ReportController extends Controller
         $request->validate([
             'course_id' => 'nullable|exists:courses,id',
             'year_level' => 'nullable|integer',
-            'academic_year' => 'nullable|string',
-            'semester' => 'nullable|integer',
         ]);
 
         $query = Student::with(['user', 'course']);
@@ -38,29 +36,19 @@ class ReportController extends Controller
         $students = $query->get();
 
         $report = $students->map(function ($student) use ($request) {
-            $gradesQuery = Grade::where('student_id', $student->id);
-            
-            if ($request->has('academic_year')) {
-                $gradesQuery->where('academic_year', $request->academic_year);
-            }
-            if ($request->has('semester')) {
-                $gradesQuery->where('semester', $request->semester);
-            }
-
-            $grades = $gradesQuery->get();
-            $avgGrade = $grades->avg('total_grade');
+            $grades = Grade::where('student_id', $student->id)->get();
+            $avgGrade = $grades->avg('overall_grade');
 
             return [
                 'student_id' => $student->student_id,
-                'name' => $student->user ? $student->user->name : 'Unknown',
+                'name' => $student->user ? ($student->user->first_name . ' ' . $student->user->last_name) : 'Unknown',
                 'course' => $student->course ? $student->course->name : null,
                 'section' => $student->section ? $student->section->name : null,
                 'year_level' => $student->year_level,
-                'status' => $student->status,
                 'average_grade' => $avgGrade ? round($avgGrade, 2) : null,
                 'subjects_count' => $grades->count(),
-                'passing_subjects' => $grades->where('total_grade', '<=', 3.0)->count(),
-                'failing_subjects' => $grades->where('total_grade', '>', 3.0)->count(),
+                'passing_subjects' => $grades->where('overall_grade', '<=', 3.0)->count(),
+                'failing_subjects' => $grades->where('overall_grade', '>', 3.0)->count(),
             ];
         });
 
@@ -105,7 +93,7 @@ class ReportController extends Controller
 
             return [
                 'student_id' => $student->student_id,
-                'name' => $student->user ? $student->user->name : 'Unknown',
+                'name' => $student->user ? ($student->user->first_name . ' ' . $student->user->last_name) : 'Unknown',
                 'section' => $student->section ? $student->section->name : null,
                 'total_classes' => $total,
                 'present' => $present,
@@ -157,7 +145,7 @@ class ReportController extends Controller
         $query = Achievement::with(['student.user']);
 
         if ($request->has('date_from') && $request->has('date_to')) {
-            $query->whereBetween('achievement_date', [$request->date_from, $request->date_to]);
+            $query->whereBetween('date', [$request->date_from, $request->date_to]);
         }
 
         $achievements = $query->get();
@@ -168,7 +156,7 @@ class ReportController extends Controller
         $topStudents = $achievements->groupBy('student_id')
             ->map(function ($items) {
                 return [
-                    'student' => $items->first()->student && $items->first()->student->user ? $items->first()->student->user->name : 'Unknown',
+                    'student' => $items->first()->student && $items->first()->student->user ? ($items->first()->student->user->first_name . ' ' . $items->first()->student->user->last_name) : 'Unknown',
                     'count' => $items->count(),
                 ];
             })
@@ -211,7 +199,7 @@ class ReportController extends Controller
 
     public function organizationReport(Request $request)
     {
-        $organizations = Organization::with(['adviser.user', 'members'])
+        $organizations = Organization::with(['members'])
             ->withCount(['members'])
             ->get();
 
@@ -219,10 +207,8 @@ class ReportController extends Controller
             return [
                 'name' => $org->name,
                 'category' => $org->category,
-                'adviser' => $org->adviser && $org->adviser->user ? $org->adviser->user->name : 'Unknown',
                 'member_count' => $org->members_count,
                 'officers' => $org->members ? $org->members->where('pivot.role', '!=', 'member')->count() : 0,
-                'is_active' => $org->is_active,
             ];
         });
 
@@ -235,11 +221,10 @@ class ReportController extends Controller
             $stats = [
                 'students' => [
                     'total' => Student::count(),
-                    'by_status' => Student::groupBy('status')->select('status', DB::raw('count(*) as count'))->get(),
-                    'by_course' => Student::with('course')->get()->groupBy('course.name')->map->count(),
+                    'by_course' => [],
                 ],
                 'faculty' => [
-                    'total' => \App\Models\Faculty::where('is_active', true)->count(),
+                    'total' => \App\Models\Faculty::count(),
                 ],
                 'violations' => [
                     'total' => Violation::count(),
@@ -251,17 +236,16 @@ class ReportController extends Controller
                 ],
                 'events' => [
                     'total' => Event::count(),
-                    'upcoming' => Event::where('start_date', '>=', now())->where('status', 'approved')->count(),
+                    'upcoming' => Event::where('date', '>=', now())->where('status', 'approved')->count(),
                 ],
                 'organizations' => [
-                    'total' => Organization::where('is_active', true)->count(),
+                    'total' => Organization::count(),
                 ],
             ];
 
             return response()->json($stats);
         } catch (\Exception $e) {
-            \Log::error('dashboardStats error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch dashboard stats'], 500);
+            return response()->json(['error' => 'Failed to fetch dashboard stats', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -270,8 +254,6 @@ class ReportController extends Controller
         $request->validate([
             'course_id' => 'nullable|exists:courses,id',
             'year_level' => 'nullable|integer',
-            'academic_year' => 'nullable|string',
-            'semester' => 'nullable|integer',
         ]);
 
         $query = Student::with(['user', 'course']);
@@ -294,32 +276,22 @@ class ReportController extends Controller
         $callback = function () use ($students, $request) {
             $file = fopen('php://output', 'w');
             
-            fputcsv($file, ['Student ID', 'Name', 'Course', 'Section', 'Year Level', 'Status', 'Average Grade', 'Subjects Count', 'Passing Subjects', 'Failing Subjects']);
+            fputcsv($file, ['Student ID', 'Name', 'Course', 'Section', 'Year Level', 'Average Grade', 'Subjects Count', 'Passing Subjects', 'Failing Subjects']);
 
             foreach ($students as $student) {
-                $gradesQuery = Grade::where('student_id', $student->id);
-                
-                if ($request->has('academic_year')) {
-                    $gradesQuery->where('academic_year', $request->academic_year);
-                }
-                if ($request->has('semester')) {
-                    $gradesQuery->where('semester', $request->semester);
-                }
-
-                $grades = $gradesQuery->get();
-                $avgGrade = $grades->avg('total_grade');
+                $grades = Grade::where('student_id', $student->id)->get();
+                $avgGrade = $grades->avg('overall_grade');
 
                 fputcsv($file, [
                     $student->student_id,
-                    $student->user ? $student->user->name : 'Unknown',
+                    $student->user ? ($student->user->first_name . ' ' . $student->user->last_name) : 'Unknown',
                     $student->course ? $student->course->name : null,
                     $student->section ? $student->section->name : null,
                     $student->year_level,
-                    $student->status,
                     $avgGrade ? round($avgGrade, 2) : 'N/A',
                     $grades->count(),
-                    $grades->where('total_grade', '<=', 3.0)->count(),
-                    $grades->where('total_grade', '>', 3.0)->count(),
+                    $grades->where('overall_grade', '<=', 3.0)->count(),
+                    $grades->where('overall_grade', '>', 3.0)->count(),
                 ]);
             }
 
@@ -378,7 +350,7 @@ class ReportController extends Controller
 
                 fputcsv($file, [
                     $student->student_id,
-                    $student->user ? $student->user->name : 'Unknown',
+                    $student->user ? ($student->user->first_name . ' ' . $student->user->last_name) : 'Unknown',
                     $student->section ? $student->section->name : null,
                     $total,
                     $present,
@@ -418,18 +390,18 @@ class ReportController extends Controller
         $callback = function () use ($violations) {
             $file = fopen('php://output', 'w');
             
-            fputcsv($file, ['Student ID', 'Student Name', 'Violation Type', 'Severity', 'Description', 'Violation Date', 'Status', 'Reported By']);
+            fputcsv($file, ['Student ID', 'Student Name', 'Violation Type', 'Severity', 'Description', 'Date', 'Status', 'Reported By']);
 
             foreach ($violations as $violation) {
                 fputcsv($file, [
                     $violation->student ? $violation->student->student_id : 'N/A',
-                    $violation->student && $violation->student->user ? $violation->student->user->name : 'Unknown',
+                    $violation->student && $violation->student->user ? ($violation->student->user->first_name . ' ' . $violation->student->user->last_name) : 'Unknown',
                     $violation->type ? $violation->type->name : $violation->type,
                     $violation->severity,
                     $violation->description,
-                    $violation->violation_date,
+                    $violation->date,
                     $violation->status,
-                    $violation->faculty ? $violation->faculty->user->name : 'N/A',
+                    $violation->faculty ? ($violation->faculty->user->first_name . ' ' . $violation->faculty->user->last_name) : 'N/A',
                 ]);
             }
 
@@ -462,16 +434,16 @@ class ReportController extends Controller
         $callback = function () use ($achievements) {
             $file = fopen('php://output', 'w');
             
-            fputcsv($file, ['Student ID', 'Student Name', 'Achievement Title', 'Type', 'Description', 'Achievement Date', 'Organization', 'Status']);
+            fputcsv($file, ['Student ID', 'Student Name', 'Achievement Title', 'Type', 'Description', 'Date', 'Organization', 'Status']);
 
             foreach ($achievements as $achievement) {
                 fputcsv($file, [
                     $achievement->student ? $achievement->student->student_id : 'N/A',
-                    $achievement->student && $achievement->student->user ? $achievement->student->user->name : 'Unknown',
+                    $achievement->student && $achievement->student->user ? ($achievement->student->user->first_name . ' ' . $achievement->student->user->last_name) : 'Unknown',
                     $achievement->title,
                     $achievement->type,
                     $achievement->description,
-                    $achievement->achievement_date,
+                    $achievement->date,
                     $achievement->organization,
                     $achievement->status,
                 ]);
@@ -505,7 +477,7 @@ class ReportController extends Controller
                 foreach ($event->participants as $participant) {
                     fputcsv($file, [
                         $participant->student_id,
-                        $participant->user ? $participant->user->name : 'Unknown',
+                        $participant->user ? ($participant->user->first_name . ' ' . $participant->user->last_name) : 'Unknown',
                         $event->title,
                         $participant->pivot->status ?? 'registered',
                     ]);
@@ -567,10 +539,8 @@ class ReportController extends Controller
                 fputcsv($file, [
                     $org->name,
                     $org->category,
-                    $org->adviser && $org->adviser->user ? $org->adviser->user->name : 'Unknown',
                     $org->members_count,
                     $org->members ? $org->members->where('pivot.role', '!=', 'member')->count() : 0,
-                    $org->is_active ? 'Active' : 'Inactive',
                 ]);
             }
 

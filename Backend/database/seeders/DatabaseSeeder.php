@@ -17,7 +17,8 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@uc.edu.ph'],
             [
-                'name' => 'System Administrator',
+                'first_name' => 'System',
+                'last_name' => 'Administrator',
                 'password' => Hash::make('password123'),
                 'role' => 'admin',
                 'is_active' => true,

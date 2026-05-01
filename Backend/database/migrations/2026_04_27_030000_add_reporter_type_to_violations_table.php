@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('violations', function (Blueprint $table) {
             if (!Schema::hasColumn('violations', 'reporter_type')) {
-                $table->string('reporter_type')->default('faculty')->after('reported_by');
+                $table->string('reporter_type')->default('faculty')->after('status');
             }
         });
     }

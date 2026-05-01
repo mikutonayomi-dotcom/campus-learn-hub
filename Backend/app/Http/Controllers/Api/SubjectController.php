@@ -22,7 +22,7 @@ class SubjectController extends Controller
 
         if ($request->has('semester')) {
             $query->whereHas('courseSubjects', function ($q) use ($request) {
-                $q->where('semester', $request->semester)->where('is_active', true);
+                $q->where('semester', $request->semester);
             });
         }
 
@@ -35,11 +35,10 @@ class SubjectController extends Controller
             'code' => 'required|string|unique:subjects',
             'name' => 'required|string',
             'description' => 'nullable|string',
-            'units' => 'required|integer|min:1',
             'course_id' => 'required|exists:courses,id',
             'year_level' => 'required|integer|min:1|max:5',
             'semester' => 'required|integer|min:1|max:2',
-            'syllabus' => 'nullable|string',
+            'faculty_id' => 'nullable|exists:faculty,id',
         ]);
 
         $subject = Subject::create($validated);
@@ -48,7 +47,7 @@ class SubjectController extends Controller
 
     public function show(Subject $subject)
     {
-        return response()->json($subject->load(['course', 'materials', 'schedules.faculty.user', 'schedules.section', 'schedules.room']));
+        return response()->json($subject->load(['course', 'materials', 'schedules.section', 'schedules.room']));
     }
 
     public function update(Request $request, Subject $subject)
@@ -56,11 +55,9 @@ class SubjectController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'description' => 'nullable|string',
-            'units' => 'sometimes|integer|min:1',
             'year_level' => 'sometimes|integer|min:1|max:5',
             'semester' => 'sometimes|integer|min:1|max:2',
-            'syllabus' => 'nullable|string',
-            'is_active' => 'sometimes|boolean',
+            'faculty_id' => 'nullable|exists:faculty,id',
         ]);
 
         $subject->update($validated);

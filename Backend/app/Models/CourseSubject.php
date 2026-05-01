@@ -15,11 +15,9 @@ class CourseSubject extends Model
         'subject_id',
         'year_level',
         'semester',
-        'is_active',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'semester' => 'integer',
         'year_level' => 'integer',
     ];

@@ -13,33 +13,20 @@ class Quiz extends Model
 
     protected $fillable = [
         'subject_id',
-        'faculty_id',
         'title',
         'description',
-        'duration_minutes',
+        'duration',
         'total_points',
-        'passing_score',
-        'start_time',
-        'end_time',
-        'is_published',
-        'allow_retake',
     ];
 
     protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
-        'is_published' => 'boolean',
-        'allow_retake' => 'boolean',
+        'duration' => 'integer',
+        'total_points' => 'integer',
     ];
 
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
-    }
-
-    public function faculty(): BelongsTo
-    {
-        return $this->belongsTo(Faculty::class);
     }
 
     public function questions(): HasMany

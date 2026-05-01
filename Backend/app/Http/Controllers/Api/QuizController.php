@@ -12,18 +12,10 @@ class QuizController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Quiz::with(['subject', 'faculty.user', 'questions']);
-
-        if ($request->user()->isFaculty()) {
-            $query->where('faculty_id', $request->user()->faculty->id);
-        }
+        $query = Quiz::with(['subject', 'questions']);
 
         if ($request->has('subject_id')) {
             $query->where('subject_id', $request->subject_id);
-        }
-
-        if ($request->has('is_published')) {
-            $query->where('is_published', $request->boolean('is_published'));
         }
 
         return response()->json($query->get());
@@ -35,38 +27,18 @@ class QuizController extends Controller
             'subject_id' => 'required|exists:subjects,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'duration_minutes' => 'required|integer|min:1',
+            'duration' => 'nullable|integer|min:1',
             'total_points' => 'required|integer|min:1',
-            'passing_score' => 'required|integer|min:0|max:total_points',
-            'start_time' => 'nullable|date',
-            'end_time' => 'nullable|date|after:start_time',
-            'is_published' => 'sometimes|boolean',
-            'allow_retake' => 'sometimes|boolean',
         ]);
-
-        $validated['faculty_id'] = $request->user()->faculty->id;
-        $validated['is_published'] = $validated['is_published'] ?? false;
-        $validated['allow_retake'] = $validated['allow_retake'] ?? false;
 
         $quiz = Quiz::create($validated);
 
-        return response()->json($quiz->load(['subject', 'faculty.user']), 201);
+        return response()->json($quiz->load(['subject']), 201);
     }
 
     public function show(Quiz $quiz)
     {
-        if (request()->user()->isStudent()) {
-            // Students only see published quizzes
-            if (!$quiz->is_published) {
-                return response()->json(['message' => 'Quiz not published'], 403);
-            }
-            // Don't show correct answers to students
-            $quiz->load(['subject', 'faculty.user', 'questions' => function ($q) {
-                $q->select('id', 'quiz_id', 'question', 'question_type', 'points', 'options', 'order');
-            }]);
-        } else {
-            $quiz->load(['subject', 'faculty.user', 'questions']);
-        }
+        $quiz->load(['subject', 'questions']);
 
         return response()->json($quiz);
     }
@@ -76,18 +48,13 @@ class QuizController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'duration_minutes' => 'sometimes|integer|min:1',
+            'duration' => 'sometimes|integer|min:1',
             'total_points' => 'sometimes|integer|min:1',
-            'passing_score' => 'sometimes|integer|min:0|max:total_points',
-            'start_time' => 'nullable|date',
-            'end_time' => 'nullable|date|after:start_time',
-            'is_published' => 'sometimes|boolean',
-            'allow_retake' => 'sometimes|boolean',
         ]);
 
         $quiz->update($validated);
 
-        return response()->json($quiz->load(['subject', 'faculty.user']));
+        return response()->json($quiz->load(['subject']));
     }
 
     public function destroy(Quiz $quiz)

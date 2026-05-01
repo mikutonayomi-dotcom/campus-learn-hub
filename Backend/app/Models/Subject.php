@@ -16,21 +16,20 @@ class Subject extends Model
         'code',
         'name',
         'description',
-        'units',
         'course_id',
         'year_level',
         'semester',
-        'syllabus',
-        'is_active',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
+        'faculty_id',
     ];
 
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function faculty(): BelongsTo
+    {
+        return $this->belongsTo(Faculty::class);
     }
 
     public function courseSubjects(): HasMany

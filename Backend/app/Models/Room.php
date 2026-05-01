@@ -11,16 +11,9 @@ class Room extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code',
         'name',
         'type',
         'capacity',
-        'location',
-        'is_active',
-    ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
     ];
 
     public function schedules(): HasMany

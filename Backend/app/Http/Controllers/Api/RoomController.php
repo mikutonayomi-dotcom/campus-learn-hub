@@ -17,11 +17,9 @@ class RoomController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'code' => 'required|string|unique:rooms',
             'name' => 'required|string',
-            'type' => 'required|in:classroom,laboratory,auditorium,gym,office',
+            'type' => 'required|in:classroom,lab,gym,auditorium',
             'capacity' => 'required|integer|min:1',
-            'location' => 'nullable|string',
         ]);
 
         $room = Room::create($validated);
@@ -30,17 +28,15 @@ class RoomController extends Controller
 
     public function show(Room $room)
     {
-        return response()->json($room->load(['schedules.subject', 'schedules.faculty.user', 'schedules.section']));
+        return response()->json($room->load(['schedules.subject', 'schedules.section']));
     }
 
     public function update(Request $request, Room $room)
     {
         $validated = $request->validate([
             'name' => 'sometimes|string',
-            'type' => 'sometimes|in:classroom,laboratory,auditorium,gym,office',
+            'type' => 'sometimes|in:classroom,lab,gym,auditorium',
             'capacity' => 'sometimes|integer|min:1',
-            'location' => 'nullable|string',
-            'is_active' => 'sometimes|boolean',
         ]);
 
         $room->update($validated);
@@ -62,7 +58,6 @@ class RoomController extends Controller
 
         $schedules = $room->schedules()
             ->where('day', $request->day)
-            ->where('academic_year', $request->input('academic_year', date('Y') . '-' . (date('Y') + 1)))
             ->get();
 
         return response()->json([

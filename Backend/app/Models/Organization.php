@@ -15,19 +15,8 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'description',
-        'adviser_id',
         'category',
-        'is_active',
     ];
-
-    protected $casts = [
-        'is_active' => 'boolean',
-    ];
-
-    public function adviser(): BelongsTo
-    {
-        return $this->belongsTo(Faculty::class, 'adviser_id');
-    }
 
     public function members(): BelongsToMany
     {

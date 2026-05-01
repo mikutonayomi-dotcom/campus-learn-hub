@@ -43,6 +43,9 @@ use App\Http\Controllers\Api\AssignmentController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Public report routes
+Route::get('/reports/dashboard-stats', [ReportController::class, 'dashboardStats'])->withoutMiddleware([\App\Http\Middleware\Authenticate::class]);
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
@@ -162,7 +165,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/achievement-summary', [ReportController::class, 'achievementSummary']);
     Route::get('/reports/event-participation', [ReportController::class, 'eventParticipation']);
     Route::get('/reports/organizations', [ReportController::class, 'organizationReport']);
-    Route::get('/reports/dashboard-stats', [ReportController::class, 'dashboardStats']);
     
     // Report export routes
     Route::get('/reports/export/student-performance', [ReportController::class, 'exportStudentPerformance']);
@@ -199,6 +201,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Medical records routes
     Route::apiResource('medical-records', MedicalRecordController::class);
+    Route::get('/medical-records', [MedicalRecordController::class, 'index']);
     Route::post('/medical-records/{medicalRecord}/verify', [MedicalRecordController::class, 'verify']);
 
     // Assignment routes

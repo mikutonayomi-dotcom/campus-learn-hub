@@ -10,18 +10,10 @@ class OrganizationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Organization::with(['adviser.user', 'members.user']);
+        $query = Organization::with(['members.user']);
 
         if ($request->has('category')) {
             $query->where('category', $request->category);
-        }
-
-        if ($request->has('adviser_id')) {
-            $query->where('adviser_id', $request->adviser_id);
-        }
-
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
         }
 
         return response()->json($query->get());
@@ -32,18 +24,16 @@ class OrganizationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string',
             'description' => 'required|string',
-            'adviser_id' => 'required|exists:faculty,id',
             'category' => 'required|string',
         ]);
 
         $organization = Organization::create($validated);
-        return response()->json($organization->load(['adviser.user']), 201);
+        return response()->json($organization, 201);
     }
 
     public function show(Organization $organization)
     {
         return response()->json($organization->load([
-            'adviser.user',
             'members.user',
             'organizationMembers.student.user'
         ]));
@@ -54,13 +44,11 @@ class OrganizationController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'description' => 'sometimes|string',
-            'adviser_id' => 'sometimes|exists:faculty,id',
             'category' => 'sometimes|string',
-            'is_active' => 'sometimes|boolean',
         ]);
 
         $organization->update($validated);
-        return response()->json($organization->load(['adviser.user', 'members.user']));
+        return response()->json($organization->load(['members.user']));
     }
 
     public function destroy(Organization $organization)
@@ -123,8 +111,7 @@ class OrganizationController extends Controller
                 if (!$faculty) {
                     return response()->json([]);
                 }
-                $organizations = Organization::with(['adviser.user', 'members.user'])
-                    ->where('adviser_id', $faculty->id)
+                $organizations = Organization::with(['members.user'])
                     ->get();
             }
 

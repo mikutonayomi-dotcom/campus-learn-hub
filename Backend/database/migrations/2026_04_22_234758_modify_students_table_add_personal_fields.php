@@ -12,14 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            // Add semester field (skip if already exists from base migration)
-            if (!Schema::hasColumn('students', 'semester')) {
-                $table->enum('semester', ['1st', '2nd'])->nullable()->after('year_level');
-            }
-
             // Add family information fields
             if (!Schema::hasColumn('students', 'mother_name')) {
-                $table->string('mother_name')->nullable()->after('emergency_contact_number');
+                $table->string('mother_name')->nullable()->after('semester');
             }
             if (!Schema::hasColumn('students', 'father_name')) {
                 $table->string('father_name')->nullable()->after('mother_name');
@@ -51,7 +46,6 @@ return new class extends Migration
     {
         Schema::table('students', function (Blueprint $table) {
             $table->dropColumn([
-                'semester',
                 'mother_name',
                 'father_name',
                 'guardian_name',

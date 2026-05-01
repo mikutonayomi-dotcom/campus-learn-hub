@@ -91,7 +91,6 @@ class FacultySeeder extends Seeder
                 [
                     'first_name' => $firstName,
                     'last_name' => $lastName,
-                    'name' => $fullName,
                     'password' => Hash::make('password123'),
                     'role' => 'faculty',
                     'is_active' => true,
@@ -105,14 +104,7 @@ class FacultySeeder extends Seeder
                 ['user_id' => $user->id],
                 [
                     'employee_id' => 'FAC-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
-                    'department' => $departments[array_rand($departments)],
-                    'position' => $positions[array_rand($positions)],
-                    'employment_status' => $employmentStatuses[array_rand($employmentStatuses)],
                     'specialization' => $specialization,
-                    'educational_attainment' => $educationalAttainment[array_rand($educationalAttainment)],
-                    'contact_number' => $user->contact_number,
-                    'office_location' => 'CCS Building Room ' . rand(101, 305),
-                    'is_active' => true,
                 ]
             );
 

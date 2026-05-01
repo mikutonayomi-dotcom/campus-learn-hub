@@ -16,24 +16,19 @@ class ScheduleSeeder extends Seeder
     {
         // Get all 1st semester sections
         $sections = Section::where('semester', '1st')
-            ->where('is_active', true)
             ->orderBy('year_level')
             ->orderBy('name')
             ->get();
 
-        // Get all faculty
-        $faculty = Faculty::with('user')->where('is_active', true)->get();
-
         // Get all rooms
-        $rooms = Room::where('is_active', true)->get();
+        $rooms = Room::get();
 
         // Get all subjects from course_subjects (1st semester)
         $courseSubjects = CourseSubject::where('semester', 1)
-            ->where('is_active', true)
             ->with('subject')
             ->get();
 
-        if ($sections->isEmpty() || $faculty->isEmpty() || $rooms->isEmpty() || $courseSubjects->isEmpty()) {
+        if ($sections->isEmpty() || $rooms->isEmpty() || $courseSubjects->isEmpty()) {
             $this->command->warn('Missing required data. Please run other seeders first.');
             return;
         }
@@ -48,7 +43,6 @@ class ScheduleSeeder extends Seeder
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
         // Track conflicts
-        $facultySchedule = []; // faculty_id => [day => [time_slots]]
         $roomSchedule = []; // room_id => [day => [time_slots]]
         $sectionSchedule = []; // section_id => [day => [time_slots]]
 
@@ -79,14 +73,6 @@ class ScheduleSeeder extends Seeder
                     continue;
                 }
 
-                // Assign faculty based on subject type/specialization
-                $assignedFaculty = $this->assignFaculty($subject, $faculty, $facultySchedule);
-                
-                if (!$assignedFaculty) {
-                    $this->command->warn('No available faculty for subject: ' . $subject->name);
-                    continue;
-                }
-
                 // Assign room based on subject type
                 $assignedRoom = $this->assignRoom($subject, $rooms, $roomSchedule);
                 
@@ -98,11 +84,9 @@ class ScheduleSeeder extends Seeder
                 // Find available time slot (avoid conflicts)
                 $scheduleInfo = $this->findAvailableTimeSlot(
                     $section,
-                    $assignedFaculty,
                     $assignedRoom,
                     $days,
                     $timeSlots,
-                    $facultySchedule,
                     $roomSchedule,
                     $sectionSchedule
                 );
@@ -112,27 +96,26 @@ class ScheduleSeeder extends Seeder
                     continue;
                 }
 
+                // Assign faculty based on subject specialization
+                $assignedFaculty = $this->assignFaculty($subject);
+                
                 // Create schedule
                 Schedule::create([
                     'subject_id' => $subject->id,
-                    'faculty_id' => $assignedFaculty->id,
                     'section_id' => $section->id,
                     'room_id' => $assignedRoom->id,
+                    'faculty_id' => $assignedFaculty ? $assignedFaculty->id : null,
                     'day' => $scheduleInfo['day'],
                     'start_time' => $scheduleInfo['start_time'],
                     'end_time' => $scheduleInfo['end_time'],
-                    'academic_year' => $academicYear,
-                    'semester' => 1,
                 ]);
 
                 // Update conflict tracking
                 $this->updateConflictTracking(
-                    $assignedFaculty->id,
                     $assignedRoom->id,
                     $section->id,
                     $scheduleInfo['day'],
                     $scheduleInfo['time_slot_index'],
-                    $facultySchedule,
                     $roomSchedule,
                     $sectionSchedule
                 );
@@ -145,7 +128,7 @@ class ScheduleSeeder extends Seeder
         $this->command->info('Total schedules created: ' . $scheduleCount);
     }
 
-    private function assignFaculty($subject, $faculty, &$facultySchedule)
+    private function assignFaculty($subject)
     {
         // Map subjects to specializations
         $subjectSpecializationMap = [
@@ -166,36 +149,30 @@ class ScheduleSeeder extends Seeder
             'Practicum' => ['IT Project Management', 'Software Engineering'],
         ];
 
-        // Find matching specialization
+        // Find matching specialization based on subject name
         $matchedSpecializations = [];
         foreach ($subjectSpecializationMap as $keyword => $specializations) {
-            if (stripos($subject->name, $keyword) !== false || stripos($subject->code, $keyword) !== false) {
-                $matchedSpecializations = array_merge($matchedSpecializations, $specializations);
+            if (stripos($subject->name, $keyword) !== false) {
+                $matchedSpecializations = $specializations;
+                break;
             }
         }
 
-        // If no match, use all specializations
+        // Default to Programming if no match
         if (empty($matchedSpecializations)) {
-            $matchedSpecializations = $faculty->pluck('specialization')->unique()->toArray();
+            $matchedSpecializations = ['Programming'];
         }
 
-        // Find faculty with matching specialization and available schedule
-        $availableFaculty = $faculty->filter(function ($f) use ($matchedSpecializations) {
-            return in_array($f->specialization, $matchedSpecializations);
-        });
+        // Find faculty with matching specialization
+        $faculty = Faculty::whereHas('user', function ($query) {
+            $query->where('is_active', true);
+        })->where(function ($query) use ($matchedSpecializations) {
+            foreach ($matchedSpecializations as $specialization) {
+                $query->orWhere('specialization', 'LIKE', "%{$specialization}%");
+            }
+        })->inRandomOrder()->first();
 
-        if ($availableFaculty->isEmpty()) {
-            // If no match, return any faculty
-            $availableFaculty = $faculty;
-        }
-
-        // Sort by current schedule count (load balancing)
-        $availableFaculty = $availableFaculty->sortBy(function ($f) use ($facultySchedule) {
-            $count = isset($facultySchedule[$f->id]) ? array_sum(array_map('count', $facultySchedule[$f->id])) : 0;
-            return $count;
-        });
-
-        return $availableFaculty->first();
+        return $faculty;
     }
 
     private function assignRoom($subject, $rooms, &$roomSchedule)
@@ -204,7 +181,7 @@ class ScheduleSeeder extends Seeder
         $isLabSubject = preg_match('/(Programming|Web|Networking|Database|App|Data|Cloud|Software|Capstone)/i', $subject->name) ||
                         preg_match('/(CC|IT)/i', $subject->code);
 
-        $roomType = $isLabSubject ? 'laboratory' : 'classroom';
+        $roomType = $isLabSubject ? 'lab' : 'classroom';
 
         // Filter rooms by type
         $availableRooms = $rooms->where('type', $roomType);
@@ -225,11 +202,9 @@ class ScheduleSeeder extends Seeder
 
     private function findAvailableTimeSlot(
         $section,
-        $faculty,
         $room,
         $days,
         $timeSlots,
-        &$facultySchedule,
         &$roomSchedule,
         &$sectionSchedule
     ) {
@@ -238,11 +213,6 @@ class ScheduleSeeder extends Seeder
             // Try each time slot
             foreach ($timeSlots as $index => $startTime) {
                 $endTime = date('H:i', strtotime($startTime) + 3600); // +1 hour
-
-                // Check faculty availability (no overlapping schedules)
-                if (isset($facultySchedule[$faculty->id][$day]) && in_array($index, $facultySchedule[$faculty->id][$day])) {
-                    continue;
-                }
 
                 // Check room availability (no overlapping schedules)
                 if (isset($roomSchedule[$room->id][$day]) && in_array($index, $roomSchedule[$room->id][$day])) {
@@ -268,23 +238,13 @@ class ScheduleSeeder extends Seeder
     }
 
     private function updateConflictTracking(
-        $facultyId,
         $roomId,
         $sectionId,
         $day,
         $timeSlotIndex,
-        &$facultySchedule,
         &$roomSchedule,
         &$sectionSchedule
     ) {
-        if (!isset($facultySchedule[$facultyId])) {
-            $facultySchedule[$facultyId] = [];
-        }
-        if (!isset($facultySchedule[$facultyId][$day])) {
-            $facultySchedule[$facultyId][$day] = [];
-        }
-        $facultySchedule[$facultyId][$day][] = $timeSlotIndex;
-
         if (!isset($roomSchedule[$roomId])) {
             $roomSchedule[$roomId] = [];
         }

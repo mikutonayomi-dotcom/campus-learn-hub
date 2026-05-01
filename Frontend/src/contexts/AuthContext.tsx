@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
-    
+
     if (token && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -56,34 +56,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
     setLoading(false);
-  }, []);
-
-  // Fetch user data when token changes
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setUser(null);
-        setRole(null);
-        return;
-      }
-
-      try {
-        const response = await api.get("/user");
-        const userData = response.data.user;
-        setUser(userData);
-        setRole(userData.role);
-        localStorage.setItem("user", JSON.stringify(userData));
-      } catch (err) {
-        console.error("Error fetching user:", err);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
-        setRole(null);
-      }
-    };
-
-    fetchUser();
   }, []);
 
   const signIn = async (email: string, password: string) => {

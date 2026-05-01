@@ -12,36 +12,23 @@ class Achievement extends Model
 
     protected $fillable = [
         'student_id',
-        'recorded_by',
         'title',
-        'type',
         'description',
-        'achievement_date',
-        'organization',
-        'proof_path',
+        'date',
+        'category',
         'status',
-        'admin_remarks',
-        'approved_by',
-        'approved_at',
+        'organization',
+        'type',
+        'achievement_date',
     ];
 
     protected $casts = [
+        'date' => 'date',
         'achievement_date' => 'date',
-        'approved_at' => 'datetime',
     ];
 
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
-    }
-
-    public function recorder(): BelongsTo
-    {
-        return $this->belongsTo(Faculty::class, 'recorded_by');
-    }
-
-    public function approver(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
     }
 }

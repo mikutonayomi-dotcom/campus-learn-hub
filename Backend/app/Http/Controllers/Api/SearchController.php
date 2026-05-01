@@ -117,9 +117,9 @@ class SearchController extends Controller
     public function getFilterOptions()
     {
         return response()->json([
-            'courses' => \App\Models\Course::where('is_active', true)->get(['id', 'code', 'name']),
+            'courses' => \App\Models\Course::all(['id', 'code', 'name']),
             'skills' => \App\Models\Skill::all(['id', 'name', 'category']),
-            'organizations' => \App\Models\Organization::where('is_active', true)->get(['id', 'name']),
+            'organizations' => \App\Models\Organization::all(['id', 'name']),
             'year_levels' => [1, 2, 3, 4, 5],
             'sections' => \App\Models\Section::all(['id', 'name']),
         ]);

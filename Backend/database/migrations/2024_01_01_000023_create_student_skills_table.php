@@ -11,9 +11,11 @@ return new class extends Migration
         if (!Schema::hasTable('student_skills')) {
             Schema::create('student_skills', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('student_id')->constrained('students');
-                $table->foreignId('skill_id')->constrained();
-                $table->string('proficiency')->nullable();
+                $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
+                $table->foreignId('skill_id')->constrained()->onDelete('cascade');
+                $table->string('level')->nullable();
+                $table->string('proof_path')->nullable();
+                $table->boolean('is_verified')->default(false);
                 $table->timestamps();
             });
         }
