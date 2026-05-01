@@ -12,6 +12,7 @@ yarn-error.log
 .env.production
 .phpunit.result.cache
 /Horizon/
+/bootstrap/cache/
 /storage/*.key
 /storage/app/
 /storage/framework/cache/
